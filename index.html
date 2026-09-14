@@ -19,19 +19,66 @@
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
-<script src="https://unpkg.com/lucide@0.363.0/dist/umd/lucide.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js" crossorigin></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
   html, body { margin: 0; padding: 0; background: #09090b; }
   #root { min-height: 100vh; }
+  #errbox { display:none; color:#fca5a5; background:#111; font:13px/1.5 monospace;
+            padding:16px; white-space:pre-wrap; word-break:break-word; }
 </style>
 </head>
 <body>
 <div id="root"></div>
+<div id="errbox"></div>
 
-<script type="text/babel" data-presets="react">
+<script>
+// Surface any load/runtime error on screen instead of leaving a blank page.
+(function () {
+  var shown = false;
+  function show(msg) {
+    if (shown) return;          // keep the FIRST (real) error, don't overwrite it
+    shown = true;
+    var b = document.getElementById("errbox");
+    if (!b) return;
+    b.style.display = "block";
+    b.textContent = "ΣΦΑΛΜΑ:\n" + msg;
+  }
+  window.addEventListener("error", function (e) {
+    show((e.message || e.error) + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    show("Promise: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+  // Also capture Babel compile errors, which are reported via console.error.
+  var origErr = console.error;
+  console.error = function () {
+    try {
+      var parts = [];
+      for (var i = 0; i < arguments.length; i++) {
+        var a = arguments[i];
+        parts.push(a && a.message ? a.message : String(a));
+      }
+      show(parts.join(" "));
+    } catch (_) {}
+    return origErr.apply(console, arguments);
+  };
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      var missing = [];
+      if (!window.React) missing.push("React");
+      if (!window.ReactDOM) missing.push("ReactDOM");
+      if (!window.Babel) missing.push("Babel");
+      if (missing.length) show("Δεν φόρτωσαν οι βιβλιοθήκες: " + missing.join(", "));
+      else if (!document.getElementById("root").hasChildNodes())
+        show("Οι βιβλιοθήκες φόρτωσαν αλλά η εφαρμογή δεν ζωγραφίστηκε.");
+    }, 8000);
+  });
+})();
+</script>
+
+<script type="text/plain" id="app-src">
 const { useState, useEffect, useMemo } = React;
 
 // ---------- Minimal localStorage-backed storage shim ----------
@@ -51,19 +98,73 @@ const storage = {
 };
 
 // ---------- Lucide icon adapter ----------
-// Renders any lucide icon by name using the globally-loaded `lucide` UMD
-// bundle, so the JSX below can keep using <Plus/>, <X/>, etc. unchanged.
+// Inline icon paths — no external icon CDN, so nothing here can fail to load.
+const ICON_PATHS = {
+  "plus": ["M5 12h14", "M12 5v14"],
+  "x": ["M18 6 6 18", "m6 6 12 12"],
+  "car": ["M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2", "M7 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0", "M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0", "M9 17h6"],
+  "bike": ["M18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z", "M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z", "M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z", "M12 17.5V14l-3-3 4-3 2 3h2"],
+  "gauge": ["m12 14 4-4", "M3.34 19a10 10 0 1 1 17.32 0"],
+  "calendar-clock": ["M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5", "M16 2v4", "M8 2v4", "M3 10h5", "M17.5 17.5 16 16.3V14", "M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"],
+  "wrench": ["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"],
+  "chevron-left": ["m15 18-6-6 6-6"],
+  "chevron-up": ["m18 15-6-6-6 6"],
+  "chevron-down": ["m6 9 6 6 6-6"],
+  "alert-triangle": ["m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z", "M12 9v4", "M12 17h.01"],
+  "check-circle-2": ["M22 11.08V12a10 10 0 1 1-5.93-9.14", "m9 11 3 3L22 4"],
+  "trash-2": ["M3 6h18", "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6", "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2", "M10 11v6", "M14 11v6"],
+  "settings-2": ["M20 7h-9", "M14 17H5", "M17 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "M7 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"],
+  "history": ["M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", "M3 3v5h5", "M12 7v5l4 2"],
+  "droplet": ["M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"],
+  "fuel": ["M3 22h12", "M4 9h10", "M14 22V4c0-1-1-2-2-2H6C5 2 4 3 4 4v18", "M14 13h2c1 0 2 1 2 2v3c0 1 1 1 1 1s1 0 1-1V9.8c0-.5-.2-1-.6-1.4L18 7"],
+  "save": ["M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7", "M7 3v4a1 1 0 0 0 1 1h7"],
+  "pen-line": ["M12 20h9", "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"],
+  "disc": ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"],
+  "battery": ["M16 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z", "M22 11v2"],
+  "wind": ["M12.8 19.6A2 2 0 1 0 14 16H2", "M17.5 8a2.5 2.5 0 1 1 2 4H2", "M9.8 4.4A2 2 0 1 1 11 8H2"],
+  "cog": ["M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M12 2v2", "M12 20v2", "m4.9 4.9 1.4 1.4", "m17.7 17.7 1.4 1.4", "M2 12h2", "M20 12h2", "m4.9 19.1 1.4-1.4", "m17.7 6.3 1.4-1.4"],
+  "sparkles": ["m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z", "M5 3v4", "M3 5h4"],
+  "folder-plus": ["M12 10v6", "M9 13h6", "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"],
+  "layers": ["m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z", "m22 12.5-9.17 4.16a2 2 0 0 1-1.66 0L2 12.5", "m22 17.5-9.17 4.16a2 2 0 0 1-1.66 0L2 17.5"],
+  "trending-up": ["M16 7h6v6", "m22 7-8.5 8.5-5-5L2 17"],
+};
+
 function LucideIcon({ iconName, size = 18, className = "", strokeWidth = 2, ...rest }) {
-  const def = window.lucide && window.lucide.icons && window.lucide.icons[iconName];
-  if (!def) return null;
+  const paths = ICON_PATHS[iconName];
+  if (!paths) return null;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...rest}>
-      {def.map(([tag, attrs], i) => React.createElement(tag, { key: i, ...attrs }))}
+      {paths.map((d, i) => <path key={i} d={d} />)}
     </svg>
   );
 }
-const makeIcon = (name) => (props) => <LucideIcon iconName={name} {...props} />;
+
+const makeIcon = (name) => {
+  const C = (props) => <LucideIcon iconName={name} {...props} />;
+  C.displayName = name;
+  return C;
+};
+
+// Safety net: React crashes hard (error #130) if any element type is not a
+// function/string. Rather than blanking the whole app over one bad icon, swap
+// the offending type for a harmless placeholder and record its name.
+window.__badTypes = [];
+(function () {
+  const origCreate = React.createElement;
+  React.createElement = function (type, props) {
+    const t = typeof type;
+    if (type == null || (t !== "function" && t !== "string" && t !== "symbol" && t !== "object")) {
+      window.__badTypes.push(String(type));
+      return origCreate("span", null);
+    }
+    if (t === "object" && !type.$$typeof) {
+      window.__badTypes.push(JSON.stringify(type).slice(0, 80));
+      return origCreate("span", null);
+    }
+    return origCreate.apply(React, arguments);
+  };
+})();
 const Plus = makeIcon("plus");
 const X = makeIcon("x");
 const Car = makeIcon("car");
@@ -1347,8 +1448,33 @@ function VehicleHistoryApp() {
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<VehicleHistoryApp />);
+const root = document.getElementById("root");
+if (ReactDOM.createRoot) {
+  ReactDOM.createRoot(root).render(<VehicleHistoryApp />);
+} else {
+  ReactDOM.render(<VehicleHistoryApp />, root);
+}
+</script>
+
+<script>
+// Compile the app source with an explicit CLASSIC JSX runtime (no injected imports),
+// so it works regardless of which Babel version the CDN serves.
+(function () {
+  try {
+    var src = document.getElementById("app-src").textContent;
+    var out = Babel.transform(src, {
+      presets: [["react", { runtime: "classic" }]],
+      sourceType: "script",
+      filename: "app.jsx"
+    }).code;
+    var s = document.createElement("script");
+    s.textContent = out;
+    document.body.appendChild(s);
+  } catch (err) {
+    var b = document.getElementById("errbox");
+    if (b) { b.style.display = "block"; b.textContent = "ΣΦΑΛΜΑ ΜΕΤΑΓΛΩΤΤΙΣΗΣ:\n" + (err.message || err); }
+  }
+})();
 </script>
 </body>
 </html>
