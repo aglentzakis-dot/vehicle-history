@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Ιστορικό Οχημάτων</title>
+<meta name="description" content="Διαχείριση ΚΤΕΟ, αλλαγών λαδιών και ιστορικού service για τα οχήματά σου." />
+
+<!-- Home screen / PWA icon setup -->
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png" />
+<meta name="theme-color" content="#09090b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Οχήματα" />
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+<script src="https://unpkg.com/lucide@0.363.0/dist/umd/lucide.js" crossorigin></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  html, body { margin: 0; padding: 0; background: #09090b; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo } = React;
+
+// ---------- Minimal localStorage-backed storage shim ----------
+// (Mirrors the shape of Claude's artifact window.storage API so the
+// rest of the app code needs no further changes.)
+const storage = {
+  async get(key) {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? null : { key, value: v };
+    } catch { return null; }
+  },
+  async set(key, value) {
+    try { localStorage.setItem(key, value); return { key, value }; }
+    catch { return null; }
+  },
+};
+
+// ---------- Lucide icon adapter ----------
+// Renders any lucide icon by name using the globally-loaded `lucide` UMD
+// bundle, so the JSX below can keep using <Plus/>, <X/>, etc. unchanged.
+function LucideIcon({ iconName, size = 18, className = "", strokeWidth = 2, ...rest }) {
+  const def = window.lucide && window.lucide.icons && window.lucide.icons[iconName];
+  if (!def) return null;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...rest}>
+      {def.map(([tag, attrs], i) => React.createElement(tag, { key: i, ...attrs }))}
+    </svg>
+  );
+}
+const makeIcon = (name) => (props) => <LucideIcon iconName={name} {...props} />;
+const Plus = makeIcon("plus");
+const X = makeIcon("x");
+const Car = makeIcon("car");
+const Bike = makeIcon("bike");
+const Gauge = makeIcon("gauge");
+const CalendarClock = makeIcon("calendar-clock");
+const Wrench = makeIcon("wrench");
+const ChevronLeft = makeIcon("chevron-left");
+const AlertTriangle = makeIcon("alert-triangle");
+const CheckCircle2 = makeIcon("check-circle-2");
+const Trash2 = makeIcon("trash-2");
+const Settings2 = makeIcon("settings-2");
+const History = makeIcon("history");
+const Droplet = makeIcon("droplet");
+const Save = makeIcon("save");
+const PenLine = makeIcon("pen-line");
+const Disc = makeIcon("disc");
+const Battery = makeIcon("battery");
+const Wind = makeIcon("wind");
+const Cog = makeIcon("cog");
+const Sparkles = makeIcon("sparkles");
+const ChevronUp = makeIcon("chevron-up");
+const ChevronDown = makeIcon("chevron-down");
+const FolderPlus = makeIcon("folder-plus");
+const Layers = makeIcon("layers");
+const TrendingUp = makeIcon("trending-up");
+
+
+const FONT_STYLE = `
+.font-display { font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-weight: 800; letter-spacing: 0.03em; }
+.font-body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.font-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace; }
+`;
+
+const ICON_MAP = { cog: Cog, disc: Disc, wind: Wind, battery: Battery, sparkles: Sparkles, wrench: Wrench, droplet: Droplet, fuel: Fuel, gauge: Gauge, layers: Layers };
+const ICON_KEYS = Object.keys(ICON_MAP);
+const COLOR_KEYS = ["amber", "rose", "sky", "emerald", "violet", "orange", "teal", "fuchsia"];
+
+const DEFAULT_CATEGORIES = [
+  {
+    key: "engine",
+    label: "Κινητήρας",
+    icon: "cog",
+    color: "amber",
+    items: ["Αλλαγή λαδιών κινητήρα", "Φίλτρο λαδιού", "Φίλτρο αέρα", "Φίλτρο καυσίμου", "Μπουζί", "Ιμάντας χρονισμού / καδένα", "Ψυκτικό υγρό"],
+  },
+  {
+    key: "brakes",
+    label: "Φρένα",
+    icon: "disc",
+    color: "rose",
+    items: ["Τακάκια φρένων εμπρός", "Τακάκια φρένων πίσω", "Δίσκοι φρένων", "Υγρό φρένων"],
+  },
+  {
+    key: "chassis",
+    label: "Ανάρτηση & Ελαστικά",
+    icon: "wind",
+    color: "sky",
+    items: ["Ελαστικά", "Αμορτισέρ", "Αλυσίδα & γρανάζια (μηχανή)"],
+  },
+  {
+    key: "electrical",
+    label: "Ηλεκτρικά & Καμπίνα",
+    icon: "battery",
+    color: "emerald",
+    items: ["Μπαταρία", "Φίλτρο καμπίνας (γύρης)"],
+  },
+  {
+    key: "other",
+    label: "Λοιπά",
+    icon: "sparkles",
+    color: "violet",
+    items: ["ΚΤΕΟ", "Γενικό service"],
+  },
+];
+const CATEGORY_STYLES = {
+  amber: { chip: "bg-amber-400/15 text-amber-300 ring-amber-400/40", tab: "bg-amber-400/15 text-amber-300 ring-amber-400/40", dot: "bg-amber-400" },
+  rose: { chip: "bg-rose-400/15 text-rose-300 ring-rose-400/40", tab: "bg-rose-400/15 text-rose-300 ring-rose-400/40", dot: "bg-rose-400" },
+  sky: { chip: "bg-sky-400/15 text-sky-300 ring-sky-400/40", tab: "bg-sky-400/15 text-sky-300 ring-sky-400/40", dot: "bg-sky-400" },
+  emerald: { chip: "bg-emerald-400/15 text-emerald-300 ring-emerald-400/40", tab: "bg-emerald-400/15 text-emerald-300 ring-emerald-400/40", dot: "bg-emerald-400" },
+  violet: { chip: "bg-violet-400/15 text-violet-300 ring-violet-400/40", tab: "bg-violet-400/15 text-violet-300 ring-violet-400/40", dot: "bg-violet-400" },
+  orange: { chip: "bg-orange-400/15 text-orange-300 ring-orange-400/40", tab: "bg-orange-400/15 text-orange-300 ring-orange-400/40", dot: "bg-orange-400" },
+  teal: { chip: "bg-teal-400/15 text-teal-300 ring-teal-400/40", tab: "bg-teal-400/15 text-teal-300 ring-teal-400/40", dot: "bg-teal-400" },
+  fuchsia: { chip: "bg-fuchsia-400/15 text-fuchsia-300 ring-fuchsia-400/40", tab: "bg-fuchsia-400/15 text-fuchsia-300 ring-fuchsia-400/40", dot: "bg-fuchsia-400" },
+};
+
+const CAR_BRANDS = [
+  "Toyota", "Volkswagen", "Opel", "Peugeot", "Renault", "Citroën", "Fiat", "Ford",
+  "Hyundai", "Kia", "Nissan", "Honda", "Mazda", "Suzuki", "Škoda", "Seat",
+  "BMW", "Mercedes-Benz", "Audi", "Volvo", "Mitsubishi", "Chevrolet", "Dacia",
+  "Mini", "Smart", "Alfa Romeo", "Jeep", "Land Rover", "Lexus", "Subaru",
+  "Chrysler", "Jaguar", "Porsche", "Tesla", "SsangYong", "Lancia", "Daihatsu",
+];
+const MOTO_BRANDS = [
+  "Yamaha", "Honda", "Suzuki", "Kawasaki", "Piaggio", "Vespa", "KTM",
+  "BMW Motorrad", "Aprilia", "Triumph", "Ducati", "Harley-Davidson",
+  "SYM", "Kymco", "Peugeot Motocycles", "Benelli", "Royal Enfield",
+  "Husqvarna", "Vespa", "Derbi", "MV Agusta", "Malaguti",
+];
+
+function BrandAutocomplete({ value, onChange, brands, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = React.useRef(null);
+
+  useEffect(() => {
+    const onClick = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const matches = value.trim()
+    ? brands.filter((b) => b.toLowerCase().includes(value.trim().toLowerCase()))
+    : brands;
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        placeholder={placeholder}
+        name="brand-field"
+        {...noAutofill}
+        onFocus={(e) => { setOpen(true); keepVisible(e); }}
+        className="w-full font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50"
+      />
+      {open && matches.length > 0 && (
+        <div className="absolute z-20 mt-1.5 w-full max-h-48 overflow-y-auto rounded-lg bg-black ring-1 ring-white/15 shadow-xl shadow-black/40 py-1">
+          {matches.map((b) => (
+            <button
+              key={b}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); onChange(b); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm font-body text-zinc-200 hover:bg-amber-400/15 hover:text-amber-300"
+            >
+              {b}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Keeps the focused field visible above the on-screen keyboard on mobile,
+// and stops the browser from painting its own light-colored autofill
+// suggestion styling over our inputs (which is what makes them look blank).
+const keepVisible = (e) => {
+  const el = e.target;
+  setTimeout(() => { el.scrollIntoView({ block: "center", behavior: "smooth" }); }, 250);
+};
+const noAutofill = { autoComplete: "off", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, onFocus: keepVisible };
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const fmtDate = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("el-GR", { day: "2-digit", month: "short", year: "numeric" });
+};
+const fmtKm = (n) => (n || n === 0 ? Number(n).toLocaleString("el-GR") + " χλμ" : "—");
+const daysBetween = (fromISO, toISO) => {
+  const a = new Date(fromISO + "T00:00:00");
+  const b = new Date(toISO + "T00:00:00");
+  return Math.round((b - a) / 86400000);
+};
+
+const DEFAULTS = {
+  car: { oilIntervalKm: 10000, oilIntervalMonths: 12 },
+  moto: { oilIntervalKm: 3000, oilIntervalMonths: 6 },
+};
+
+function kteoStatus(vehicle) {
+  if (!vehicle.kteoExpiry) return { level: "unknown", label: "Δεν έχει οριστεί", days: null };
+  const days = daysBetween(todayISO(), vehicle.kteoExpiry);
+  if (days < 0) return { level: "danger", label: `Έληξε πριν ${Math.abs(days)} ημέρες`, days };
+  if (days <= 30) return { level: "warn", label: `Λήγει σε ${days} ημέρες`, days };
+  return { level: "ok", label: `Ισχύει ακόμη ${days} ημέρες`, days };
+}
+
+function avgKmPerYear(vehicle) {
+  if (!vehicle.purchaseDate) return null;
+  const days = daysBetween(vehicle.purchaseDate, todayISO());
+  const years = Math.max(days / 365, 30 / 365); // avoid absurd rates in the first month
+  const kmAtPurchase = Number(vehicle.kmAtPurchase) || 0;
+  const currentKm = Number(vehicle.currentKm) || 0;
+  const kmDriven = currentKm - kmAtPurchase;
+  if (kmDriven <= 0 || days <= 0) return null;
+  return kmDriven / years;
+}
+
+function oilStatus(vehicle) {
+  const avgKm = avgKmPerYear(vehicle);
+  if (!vehicle.lastOilDate || vehicle.lastOilKm == null) {
+    return { level: "unknown", label: "Δεν υπάρχει καταγραφή αλλαγής λαδιών", remKm: null, remDays: null, avgKm };
+  }
+  const lastOilKm = Number(vehicle.lastOilKm) || 0;
+  const currentKm = Number(vehicle.currentKm) || 0;
+  const intervalKm = Number(vehicle.oilIntervalKm) || 10000;
+  const intervalMonths = Number(vehicle.oilIntervalMonths) || 12;
+  const nextKm = lastOilKm + intervalKm;
+  const nextDateDays = intervalMonths * 30;
+  const nextDate = new Date(new Date(vehicle.lastOilDate + "T00:00:00").getTime() + nextDateDays * 86400000)
+    .toISOString().slice(0, 10);
+  const remKm = nextKm - currentKm;
+  const remDays = daysBetween(todayISO(), nextDate);
+
+  // Estimated calendar date the km-based interval will be reached, based on
+  // the vehicle's actual average yearly usage (from purchase date/odometer).
+  let estMonths = null, estDate = null;
+  if (avgKm && remKm > 0) {
+    estMonths = Math.round((remKm / avgKm) * 12);
+    estDate = new Date(Date.now() + (remKm / avgKm) * 365 * 86400000).toISOString().slice(0, 10);
+  }
+
+  let level = "ok";
+  if (remKm <= 0 || remDays <= 0) level = "danger";
+  else if (remKm <= 1000 || remDays <= 30) level = "warn";
+  return { level, remKm, remDays, nextKm, nextDate, avgKm, estMonths, estDate };
+}
+
+const LEVEL_STYLES = {
+  ok: { text: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/30", dot: "bg-emerald-400" },
+  warn: { text: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/30", dot: "bg-amber-400" },
+  danger: { text: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/30", dot: "bg-rose-400" },
+  unknown: { text: "text-zinc-400", bg: "bg-zinc-400/10", ring: "ring-zinc-400/30", dot: "bg-zinc-500" },
+};
+
+function StatusPill({ level, children, icon: Icon }) {
+  const s = LEVEL_STYLES[level] || LEVEL_STYLES.unknown;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-body font-medium ${s.bg} ${s.text} ring-1 ${s.ring}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+      {Icon ? <Icon size={12} /> : null}
+      {children}
+    </span>
+  );
+}
+
+function GaugeArc({ pct, level, label, sublabel }) {
+  const s = LEVEL_STYLES[level] || LEVEL_STYLES.unknown;
+  const clamped = Math.max(0, Math.min(100, pct));
+  const circumference = 2 * Math.PI * 40;
+  const strokeColor = level === "ok" ? "#34d399" : level === "warn" ? "#fbbf24" : level === "danger" ? "#fb7185" : "#71717a";
+  return (
+    <div className="relative flex flex-col items-center justify-center">
+      <svg width="112" height="112" viewBox="0 0 100 100" className="-rotate-90">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#2B2C31" strokeWidth="9" />
+        <circle
+          cx="50" cy="50" r="40" fill="none" stroke={strokeColor} strokeWidth="9"
+          strokeDasharray={circumference} strokeDashoffset={circumference * (1 - clamped / 100)}
+          strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.6s ease" }}
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className={`font-mono font-bold text-lg ${s.text}`}>{label}</span>
+        <span className="font-body text-xs text-zinc-400 mt-0.5 text-center px-2">{sublabel}</span>
+      </div>
+    </div>
+  );
+}
+
+function VehicleIcon({ type, size = 18, className = "" }) {
+  return type === "moto" ? <Bike size={size} className={className} /> : <Car size={size} className={className} />;
+}
+
+// ---------- Add / Edit Vehicle Modal ----------
+function VehicleForm({ initial, onSave, onCancel, onDelete }) {
+  const [type, setType] = useState(initial?.type || "car");
+  const [plate, setPlate] = useState(initial?.plate || "");
+  const [brand, setBrand] = useState(initial?.brand || "");
+  const [model, setModel] = useState(initial?.model || "");
+  const [year, setYear] = useState(initial?.year || "");
+  const [currentKm, setCurrentKm] = useState(initial?.currentKm ?? "");
+  const [kteoExpiry, setKteoExpiry] = useState(initial?.kteoExpiry || "");
+  const [oilIntervalKm, setOilIntervalKm] = useState(initial?.oilIntervalKm ?? DEFAULTS[type].oilIntervalKm);
+  const [oilIntervalMonths, setOilIntervalMonths] = useState(initial?.oilIntervalMonths ?? DEFAULTS[type].oilIntervalMonths);
+  const [purchaseDate, setPurchaseDate] = useState(initial?.purchaseDate || "");
+  const [kmAtPurchase, setKmAtPurchase] = useState(initial?.kmAtPurchase ?? "");
+
+  useEffect(() => {
+    if (!initial) {
+      setOilIntervalKm(DEFAULTS[type].oilIntervalKm);
+      setOilIntervalMonths(DEFAULTS[type].oilIntervalMonths);
+    }
+  }, [type]);
+
+  const canSave = plate.trim() && brand.trim();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="w-full sm:max-w-md overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide">
+            {initial ? "Επεξεργασία οχήματος" : "Νέο όχημα"}
+          </h2>
+          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          {[{ k: "car", l: "Αυτοκίνητο", i: Car }, { k: "moto", l: "Μηχανή", i: Bike }].map(({ k, l, i: Icon }) => (
+            <button
+              key={k}
+              onClick={() => setType(k)}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 font-body text-sm font-medium ring-1 transition ${
+                type === k ? "bg-amber-400/15 text-amber-300 ring-amber-400/40" : "bg-zinc-800 text-zinc-400 ring-white/10"
+              }`}
+            >
+              <Icon size={16} /> {l}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="font-body text-xs text-zinc-400 mb-1 block">Πινακίδα</label>
+            <input value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())}
+              placeholder="π.χ. ΑΒΗ-1234" name="plate-field" {...noAutofill}
+              className="w-full font-mono tracking-wider rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="font-body text-xs text-zinc-400 mb-1 block">Μάρκα</label>
+              <BrandAutocomplete value={brand} onChange={setBrand} brands={type === "moto" ? MOTO_BRANDS : CAR_BRANDS} placeholder="π.χ. Toyota" />
+            </div>
+            <div className="flex-1">
+              <label className="font-body text-xs text-zinc-400 mb-1 block">Μοντέλο</label>
+              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="π.χ. Yaris"
+                name="model-field" {...noAutofill}
+                className="w-full font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="font-body text-xs text-zinc-400 mb-1 block">Έτος</label>
+              <input value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={4}
+                name="year-field" {...noAutofill}
+                className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+            </div>
+            <div className="flex-1">
+              <label className="font-body text-xs text-zinc-400 mb-1 block">Τρέχοντα χιλιόμετρα</label>
+              <input value={currentKm} onChange={(e) => setCurrentKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+                name="current-km-field" {...noAutofill}
+                className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-white/5">
+            <label className="font-body text-xs text-zinc-400 mb-1 block flex items-center gap-1.5"><CalendarClock size={13} /> Λήξη ΚΤΕΟ</label>
+            <input type="date" value={kteoExpiry} onChange={(e) => setKteoExpiry(e.target.value)}
+              name="kteo-date-field" autoComplete="off" onFocus={keepVisible}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
+          </div>
+
+          <div className="pt-2 border-t border-white/5">
+            <label className="font-body text-xs text-zinc-400 mb-1 block flex items-center gap-1.5"><Droplet size={13} /> Διάστημα αλλαγής λαδιών</label>
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <input value={oilIntervalKm} onChange={(e) => setOilIntervalKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+                  name="oil-km-field" {...noAutofill}
+                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">χλμ</span>
+              </div>
+              <div className="flex-1 relative">
+                <input value={oilIntervalMonths} onChange={(e) => setOilIntervalMonths(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+                  name="oil-months-interval-field" {...noAutofill}
+                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">μήνες</span>
+              </div>
+            </div>
+            <p className="font-body text-xs text-zinc-400 mt-1">Όποιο από τα δύο συμπληρωθεί πρώτο.</p>
+          </div>
+
+          <div className="pt-2 border-t border-white/5">
+            <label className="font-body text-xs text-zinc-400 mb-1 block flex items-center gap-1.5"><TrendingUp size={13} /> Μέση ετήσια χρήση (προαιρετικό)</label>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)}
+                  name="purchase-date-field" autoComplete="off" onFocus={keepVisible}
+                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
+                <p className="font-body text-xs text-zinc-500 mt-1">Ημερομηνία αγοράς</p>
+              </div>
+              <div className="flex-1">
+                <input value={kmAtPurchase} onChange={(e) => setKmAtPurchase(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+                  placeholder="0" name="km-at-purchase-field" {...noAutofill}
+                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
+                <p className="font-body text-xs text-zinc-500 mt-1">Χλμ κατά την αγορά</p>
+              </div>
+            </div>
+            {(() => {
+              const est = avgKmPerYear({ purchaseDate, kmAtPurchase, currentKm });
+              return est ? (
+                <p className="font-body text-xs text-amber-400/80 mt-2">
+                  ≈ {Math.round(est).toLocaleString("el-GR")} χλμ/έτος — θα εκτιμάται πότε πλησιάζει η επόμενη αλλαγή.
+                </p>
+              ) : (
+                <p className="font-body text-xs text-zinc-500 mt-2">Συμπλήρωσε ημερομηνία αγοράς για εκτίμηση πότε θα χρειαστείς την επόμενη αλλαγή λαδιών.</p>
+              );
+            })()}
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          {initial && (
+            <button onClick={() => onDelete(initial.id)}
+              className="rounded-xl px-3.5 py-2.5 bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/30 font-body text-sm font-medium">
+              <Trash2 size={16} />
+            </button>
+          )}
+          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">
+            Άκυρο
+          </button>
+          <button
+            disabled={!canSave}
+            onClick={() => onSave({
+              id: initial?.id || uid(), type, plate: plate.trim(), brand: brand.trim(), model: model.trim(),
+              year: year ? Number(year) : null, currentKm: currentKm ? Number(currentKm) : 0,
+              kteoExpiry: kteoExpiry || null,
+              oilIntervalKm: oilIntervalKm ? Number(oilIntervalKm) : DEFAULTS[type].oilIntervalKm,
+              oilIntervalMonths: oilIntervalMonths ? Number(oilIntervalMonths) : DEFAULTS[type].oilIntervalMonths,
+              purchaseDate: purchaseDate || null,
+              kmAtPurchase: kmAtPurchase ? Number(kmAtPurchase) : 0,
+              lastOilKm: initial?.lastOilKm ?? null, lastOilDate: initial?.lastOilDate ?? null,
+            })}
+            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            <Save size={15} /> Αποθήκευση
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Add Service Record Modal ----------
+function ServiceForm({ vehicle, initial, categories, onCategoriesChange, onSave, onCancel, onDelete }) {
+  const [date, setDate] = useState(initial?.date || todayISO());
+  const [km, setKm] = useState(initial?.km ?? vehicle.currentKm ?? "");
+  const [items, setItems] = useState(initial?.items || []);
+  const [cost, setCost] = useState(initial?.cost != null ? String(initial.cost) : "");
+  const [notes, setNotes] = useState(initial?.notes || "");
+  const [customItem, setCustomItem] = useState("");
+  const [activeCategory, setActiveCategory] = useState(categories[0]?.key);
+  const [showManager, setShowManager] = useState(false);
+
+  useEffect(() => {
+    if (!categories.some((c) => c.key === activeCategory)) setActiveCategory(categories[0]?.key);
+  }, [categories]);
+
+  const toggleItem = (item) => setItems((prev) => prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]);
+  const currentCategory = categories.find((c) => c.key === activeCategory) || categories[0];
+  const allKnownItems = categories.flatMap((c) => c.items);
+  const customItems = items.filter((i) => !allKnownItems.includes(i));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="w-full sm:max-w-md overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide">
+            {initial ? "Επεξεργασία service" : "Νέα καταχώρηση service"}
+          </h2>
+          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
+        </div>
+
+        <div className="flex gap-3 mb-4">
+          <div className="flex-1">
+            <label className="font-body text-xs text-zinc-400 mb-1 block">Ημερομηνία</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              name="service-date-field" autoComplete="off" onFocus={keepVisible}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
+          </div>
+          <div className="flex-1">
+            <label className="font-body text-xs text-zinc-400 mb-1 block">Χιλιόμετρα</label>
+            <input value={km} onChange={(e) => setKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+              name="service-km-field" {...noAutofill}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-2">
+          <label className="font-body text-xs text-zinc-400 block">Τι έγινε — επίλεξε κατηγορία και μετά τα σχετικά</label>
+          <button onClick={() => setShowManager(true)}
+            className="flex items-center gap-1 text-xs font-body font-medium text-zinc-400 hover:text-amber-300">
+            <Settings2 size={13} /> Κατηγορίες
+          </button>
+        </div>
+
+        <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
+          {categories.map((cat) => {
+            const s = CATEGORY_STYLES[cat.color] || CATEGORY_STYLES.amber;
+            const Icon = ICON_MAP[cat.icon] || Cog;
+            const countSelected = cat.items.filter((i) => items.includes(i)).length;
+            return (
+              <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
+                className={`shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body font-semibold ring-1 transition ${
+                  activeCategory === cat.key ? s.tab : "bg-white/5 text-zinc-400 ring-white/10"
+                }`}>
+                <Icon size={14} className={activeCategory === cat.key ? "" : "text-zinc-500"} />
+                {cat.label}
+                {countSelected > 0 && (
+                  <span className="rounded-full bg-black/30 px-1.5 py-0.5 text-xs font-mono leading-none">{countSelected}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {currentCategory && (
+          <div className="rounded-2xl bg-black/40 ring-1 ring-white/10 p-3 mb-3">
+            {currentCategory.items.length === 0 ? (
+              <p className="font-body text-xs text-zinc-500 py-1">Άδεια κατηγορία — πρόσθεσε στοιχεία από τις "Κατηγορίες" πάνω.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {currentCategory.items.map((item) => {
+                  const s = CATEGORY_STYLES[currentCategory.color] || CATEGORY_STYLES.amber;
+                  const selected = items.includes(item);
+                  return (
+                    <button key={item} onClick={() => toggleItem(item)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-body font-medium ring-1 transition ${
+                        selected ? s.chip : "bg-white/5 text-zinc-200 ring-white/15 hover:bg-white/10"
+                      }`}>
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {customItems.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {customItems.map((item) => (
+              <button key={item} onClick={() => toggleItem(item)}
+                className="rounded-full px-3 py-1.5 text-xs font-body font-medium ring-1 bg-amber-400/15 text-amber-300 ring-amber-400/40">
+                {item} <X size={11} className="inline ml-1 -mr-0.5" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2 mb-4">
+          <input value={customItem} onChange={(e) => setCustomItem(e.target.value)} placeholder="Κάτι άλλο..."
+            name="custom-item-field" {...noAutofill}
+            className="flex-1 font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2 text-sm text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
+          <button onClick={() => { if (customItem.trim()) { setItems((p) => [...p, customItem.trim()]); setCustomItem(""); } }}
+            className="rounded-lg px-3 bg-zinc-800 text-zinc-200 ring-1 ring-white/15"><Plus size={16} /></button>
+        </div>
+
+        <div className="flex gap-3 mb-4">
+          <div className="flex-1">
+            <label className="font-body text-xs text-zinc-400 mb-1 block">Κόστος (€)</label>
+            <input value={cost} onChange={(e) => setCost(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal"
+              name="service-cost-field" {...noAutofill}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+          </div>
+        </div>
+        <div className="mb-5">
+          <label className="font-body text-xs text-zinc-400 mb-1 block">Σημειώσεις</label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
+            placeholder="π.χ. συνεργείο, παρατηρήσεις..."
+            name="service-notes-field" {...noAutofill}
+            className="w-full font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50 resize-none" />
+        </div>
+
+        <div className="flex gap-2">
+          {initial && onDelete && (
+            <button onClick={() => onDelete(initial.id)}
+              className="rounded-xl px-3.5 py-2.5 bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/30 font-body text-sm font-medium">
+              <Trash2 size={16} />
+            </button>
+          )}
+          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">
+            Άκυρο
+          </button>
+          <button
+            disabled={items.length === 0 || !km}
+            onClick={() => onSave({ id: initial?.id || uid(), date, km: Number(km), items, cost: cost ? Number(cost) : null, notes: notes.trim() })}
+            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            <Save size={15} /> {initial ? "Αποθήκευση" : "Καταχώρηση"}
+          </button>
+        </div>
+      </div>
+
+      {showManager && (
+        <CategoryManager categories={categories} onChange={onCategoriesChange} onClose={() => setShowManager(false)} />
+      )}
+    </div>
+  );
+}
+
+// ---------- Category / Sub-category Manager ----------
+function CategoryManager({ categories, onChange, onClose }) {
+  const [expanded, setExpanded] = useState(null);
+  const [newLabel, setNewLabel] = useState("");
+  const [newColor, setNewColor] = useState(COLOR_KEYS[0]);
+  const [newIcon, setNewIcon] = useState(ICON_KEYS[0]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newItemText, setNewItemText] = useState({});
+  const [renamingKey, setRenamingKey] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renamingItem, setRenamingItem] = useState(null); // `${catKey}::${item}`
+  const [renameItemValue, setRenameItemValue] = useState("");
+
+  const moveCategory = (idx, dir) => {
+    const next = [...categories];
+    const j = idx + dir;
+    if (j < 0 || j >= next.length) return;
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
+
+  const moveItem = (catKey, idx, dir) => {
+    const next = categories.map((c) => {
+      if (c.key !== catKey) return c;
+      const items = [...c.items];
+      const j = idx + dir;
+      if (j < 0 || j >= items.length) return c;
+      [items[idx], items[j]] = [items[j], items[idx]];
+      return { ...c, items };
+    });
+    onChange(next);
+  };
+
+  const removeCategory = (key) => onChange(categories.filter((c) => c.key !== key));
+
+  const removeItem = (catKey, item) => onChange(categories.map((c) =>
+    c.key === catKey ? { ...c, items: c.items.filter((i) => i !== item) } : c
+  ));
+
+  const addItem = (catKey) => {
+    const text = (newItemText[catKey] || "").trim();
+    if (!text) return;
+    onChange(categories.map((c) =>
+      c.key === catKey && !c.items.includes(text) ? { ...c, items: [...c.items, text] } : c
+    ));
+    setNewItemText((p) => ({ ...p, [catKey]: "" }));
+  };
+
+  const renameCategory = (key) => {
+    const label = renameValue.trim();
+    if (label) onChange(categories.map((c) => (c.key === key ? { ...c, label } : c)));
+    setRenamingKey(null);
+  };
+
+  const renameItem = (catKey, oldItem) => {
+    const label = renameItemValue.trim();
+    if (label) {
+      onChange(categories.map((c) =>
+        c.key === catKey ? { ...c, items: c.items.map((i) => (i === oldItem ? label : i)) } : c
+      ));
+    }
+    setRenamingItem(null);
+  };
+
+  const addCategory = () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    onChange([...categories, { key: uid(), label, icon: newIcon, color: newColor, items: [] }]);
+    setNewLabel(""); setNewColor(COLOR_KEYS[0]); setNewIcon(ICON_KEYS[0]); setShowAddCategory(false);
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" style={{ zIndex: 60 }}>
+      <div className="w-full sm:max-w-md overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide flex items-center gap-1.5">
+            <Layers size={17} className="text-amber-400" /> Κατηγορίες service
+          </h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
+        </div>
+        <p className="font-body text-xs text-zinc-500 mb-4">Πρόσθεσε, αφαίρεσε ή αλλάξε σειρά σε κατηγορίες και στοιχεία τους.</p>
+
+        <div className="space-y-2 mb-4">
+          {categories.map((cat, idx) => {
+            const s = CATEGORY_STYLES[cat.color] || CATEGORY_STYLES.amber;
+            const Icon = ICON_MAP[cat.icon] || Cog;
+            const isOpen = expanded === cat.key;
+            return (
+              <div key={cat.key} className="rounded-xl bg-black/40 ring-1 ring-white/10 overflow-hidden">
+                <div className="flex items-center gap-2 p-2.5">
+                  <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${s.chip}`}>
+                    <Icon size={14} />
+                  </span>
+                  {renamingKey === cat.key ? (
+                    <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && renameCategory(cat.key)}
+                      autoFocus name={`rename-${cat.key}`} {...noAutofill}
+                      className="flex-1 font-body text-sm rounded-lg bg-black ring-1 ring-amber-400/50 px-2 py-1 text-zinc-50 outline-none" />
+                  ) : (
+                    <button onClick={() => setExpanded(isOpen ? null : cat.key)} className="flex-1 text-left font-body text-sm font-medium text-zinc-200 truncate">
+                      {cat.label} <span className="text-zinc-500 font-normal">· {cat.items.length}</span>
+                    </button>
+                  )}
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {renamingKey === cat.key ? (
+                      <button onClick={() => renameCategory(cat.key)} className="p-1.5 text-emerald-400"><CheckCircle2 size={15} /></button>
+                    ) : (
+                      <button onClick={() => { setRenamingKey(cat.key); setRenameValue(cat.label); }} className="p-1.5 text-zinc-400 hover:text-zinc-200"><PenLine size={13} /></button>
+                    )}
+                    <button onClick={() => moveCategory(idx, -1)} disabled={idx === 0} className="p-1.5 text-zinc-400 disabled:opacity-20 hover:text-zinc-200"><ChevronUp size={15} /></button>
+                    <button onClick={() => moveCategory(idx, 1)} disabled={idx === categories.length - 1} className="p-1.5 text-zinc-400 disabled:opacity-20 hover:text-zinc-200"><ChevronDown size={15} /></button>
+                    <button onClick={() => removeCategory(cat.key)} className="p-1.5 text-zinc-400 hover:text-rose-400"><Trash2 size={13} /></button>
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div className="px-2.5 pb-2.5 space-y-1.5 border-t border-white/5 pt-2.5">
+                    {cat.items.map((item, i) => {
+                      const itemKey = `${cat.key}::${item}`;
+                      const isRenaming = renamingItem === itemKey;
+                      return (
+                        <div key={item} className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5">
+                          {isRenaming ? (
+                            <input value={renameItemValue} onChange={(e) => setRenameItemValue(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && renameItem(cat.key, item)}
+                              autoFocus name={`rename-item-${itemKey}`} {...noAutofill}
+                              className="flex-1 font-body text-xs rounded-lg bg-black ring-1 ring-amber-400/50 px-2 py-1 text-zinc-50 outline-none" />
+                          ) : (
+                            <span className="flex-1 font-body text-xs text-zinc-200 truncate">{item}</span>
+                          )}
+                          {isRenaming ? (
+                            <button onClick={() => renameItem(cat.key, item)} className="p-1 text-emerald-400"><CheckCircle2 size={14} /></button>
+                          ) : (
+                            <button onClick={() => { setRenamingItem(itemKey); setRenameItemValue(item); }} className="p-1 text-zinc-500 hover:text-zinc-200"><PenLine size={12} /></button>
+                          )}
+                          <button onClick={() => moveItem(cat.key, i, -1)} disabled={i === 0} className="p-1 text-zinc-500 disabled:opacity-20 hover:text-zinc-200"><ChevronUp size={13} /></button>
+                          <button onClick={() => moveItem(cat.key, i, 1)} disabled={i === cat.items.length - 1} className="p-1 text-zinc-500 disabled:opacity-20 hover:text-zinc-200"><ChevronDown size={13} /></button>
+                          <button onClick={() => removeItem(cat.key, item)} className="p-1 text-zinc-500 hover:text-rose-400"><X size={13} /></button>
+                        </div>
+                      );
+                    })}
+                    <div className="flex gap-1.5 pt-1">
+                      <input value={newItemText[cat.key] || ""} onChange={(e) => setNewItemText((p) => ({ ...p, [cat.key]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && addItem(cat.key)}
+                        placeholder="Νέο στοιχείο..." name={`new-item-${cat.key}`} {...noAutofill}
+                        className="flex-1 font-body text-xs rounded-lg bg-black ring-1 ring-white/15 px-2.5 py-1.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
+                      <button onClick={() => addItem(cat.key)} className="rounded-lg px-2.5 bg-zinc-800 text-zinc-200 ring-1 ring-white/15"><Plus size={14} /></button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {showAddCategory ? (
+          <div className="rounded-xl bg-black/40 ring-1 ring-white/10 p-3 mb-3 space-y-2.5">
+            <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Όνομα κατηγορίας"
+              name="new-category-label" {...noAutofill} autoFocus
+              className="w-full font-body text-sm rounded-lg bg-black ring-1 ring-white/15 px-3 py-2 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
+            <div>
+              <p className="font-body text-xs text-zinc-500 mb-1.5">Χρώμα</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {COLOR_KEYS.map((c) => (
+                  <button key={c} onClick={() => setNewColor(c)}
+                    className={`h-7 w-7 rounded-full ${CATEGORY_STYLES[c].dot} ${newColor === c ? "ring-2 ring-offset-2 ring-offset-zinc-900 ring-white" : "opacity-50"}`} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="font-body text-xs text-zinc-500 mb-1.5">Εικονίδιο</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {ICON_KEYS.map((k) => {
+                  const I = ICON_MAP[k];
+                  return (
+                    <button key={k} onClick={() => setNewIcon(k)}
+                      className={`h-8 w-8 rounded-lg flex items-center justify-center ring-1 ${newIcon === k ? "bg-amber-400/15 ring-amber-400/50 text-amber-300" : "bg-white/5 ring-white/10 text-zinc-400"}`}>
+                      <I size={15} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowAddCategory(false)} className="flex-1 rounded-lg py-2 bg-zinc-800 text-zinc-300 font-body text-xs font-medium ring-1 ring-white/10">Άκυρο</button>
+              <button onClick={addCategory} disabled={!newLabel.trim()}
+                className="flex-1 rounded-lg py-2 bg-amber-400 text-zinc-900 font-body text-xs font-semibold disabled:opacity-40">Προσθήκη</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowAddCategory(true)}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 bg-white/5 text-zinc-300 ring-1 ring-white/10 font-body text-sm font-medium mb-3">
+            <FolderPlus size={15} /> Νέα κατηγορία
+          </button>
+        )}
+
+        <button onClick={onClose} className="w-full rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold">
+          Έτοιμο
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function VehicleDetail({ vehicle, records, categories, onCategoriesChange, onBack, onEdit, onQuickUpdate, onAddRecord, onEditRecord, onDeleteRecord }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [showKteoEdit, setShowKteoEdit] = useState(false);
+  const [showOilEdit, setShowOilEdit] = useState(false);
+  const kteo = kteoStatus(vehicle);
+  const oil = oilStatus(vehicle);
+
+  const kteoPct = kteo.days == null ? 0 : Math.max(0, Math.min(100, (kteo.days / 365) * 100));
+  const oilPct = oil.remKm == null ? 0 : Math.max(0, Math.min(100, (oil.remKm / (vehicle.oilIntervalKm || 10000)) * 100));
+
+  const sorted = [...records].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  return (
+    <div className="min-h-full font-body">
+      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+        <button onClick={onBack} className="text-zinc-400 p-1 -ml-1"><ChevronLeft size={22} /></button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <VehicleIcon type={vehicle.type} size={15} className="text-amber-400 shrink-0" />
+            <h1 className="font-display text-base font-semibold text-zinc-50 truncate uppercase tracking-wide">
+              {vehicle.brand} {vehicle.model}
+            </h1>
+          </div>
+          <span className="font-mono text-xs text-zinc-400 tracking-widest">{vehicle.plate}{vehicle.year ? ` · ${vehicle.year}` : ""}</span>
+        </div>
+        <button onClick={() => onEdit(vehicle)} className="text-zinc-400 p-1.5"><Settings2 size={18} /></button>
+      </div>
+
+      <div className="px-4 grid grid-cols-2 gap-3 mb-4">
+        <button onClick={() => setShowKteoEdit(true)}
+          className="bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-3 flex flex-col items-center active:opacity-80 transition">
+          <GaugeArc pct={kteoPct} level={kteo.level}
+            label={kteo.days == null ? "—" : kteo.days < 0 ? "ΕΛΗΞΕ" : `${kteo.days}η`}
+            sublabel="ΚΤΕΟ" />
+          <p className="font-body text-xs text-zinc-400 mt-2 text-center">{kteo.label}</p>
+          {vehicle.kteoExpiry && <p className="font-mono text-xs text-zinc-400 mt-0.5">{fmtDate(vehicle.kteoExpiry)}</p>}
+          <span className="text-amber-400/80 text-xs font-body font-medium flex items-center gap-1 mt-2">
+            <PenLine size={12} /> Ενημέρωση
+          </span>
+        </button>
+        <button onClick={() => setShowOilEdit(true)}
+          className="bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-3 flex flex-col items-center active:opacity-80 transition">
+          <GaugeArc pct={oilPct} level={oil.level}
+            label={oil.remKm == null ? "—" : oil.remKm < 0 ? "ΤΩΡΑ" : `${Math.round(oil.remKm / 100) / 10}χ`}
+            sublabel="Λάδια" />
+          <p className="font-body text-xs text-zinc-400 mt-2 text-center">
+            {oil.remKm == null ? "Καταχώρησε αλλαγή λαδιών" : oil.remKm < 0 ? "Χρειάζεται αλλαγή" : `${fmtKm(oil.remKm)} απόσταση`}
+          </p>
+          {oil.nextDate && <p className="font-mono text-xs text-zinc-400 mt-0.5">έως {fmtDate(oil.nextDate)}</p>}
+          {oil.estMonths != null && oil.estMonths > 0 && (
+            <p className="font-body text-xs text-sky-400/80 mt-1.5 text-center flex items-center gap-1">
+              <TrendingUp size={11} /> ~{oil.estMonths} {oil.estMonths === 1 ? "μήνα" : "μήνες"} με βάση τη χρήση σου
+            </p>
+          )}
+          <span className="text-amber-400/80 text-xs font-body font-medium flex items-center gap-1 mt-2">
+            <PenLine size={12} /> Ενημέρωση
+          </span>
+        </button>
+      </div>
+
+      <div className="px-4 mb-4">
+        <button onClick={() => onEdit(vehicle)}
+          className="w-full bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-4 flex items-center justify-between active:opacity-80 transition">
+          <div className="flex items-center gap-2.5">
+            <Gauge size={17} className="text-zinc-400" />
+            <div className="text-left">
+              <p className="font-body text-xs text-zinc-400">Οδόμετρο</p>
+              <p className="font-mono text-lg font-semibold text-zinc-50">{fmtKm(vehicle.currentKm)}</p>
+            </div>
+          </div>
+          <span className="text-amber-400/80 text-xs font-body font-medium flex items-center gap-1">
+            <PenLine size={13} /> Ενημέρωση
+          </span>
+        </button>
+      </div>
+
+      <div className="px-4 flex items-center justify-between mb-2">
+        <h2 className="font-display text-sm font-semibold text-zinc-300 uppercase tracking-wide flex items-center gap-1.5">
+          <History size={15} className="text-zinc-400" /> Ιστορικό
+        </h2>
+        <button onClick={() => setShowForm(true)}
+          className="flex items-center gap-1 rounded-full bg-amber-400 text-zinc-900 px-3 py-1.5 text-xs font-body font-semibold">
+          <Plus size={14} /> Service
+        </button>
+      </div>
+
+      <div className="px-4 pb-8 space-y-2.5">
+        {sorted.length === 0 && (
+          <div className="rounded-2xl ring-1 ring-white/10 bg-zinc-900 p-6 text-center">
+            <Wrench size={22} className="mx-auto text-zinc-400 mb-2" />
+            <p className="font-body text-sm text-zinc-400">Δεν υπάρχει καταγεγραμμένο service ακόμη.</p>
+          </div>
+        )}
+        {sorted.map((r) => (
+          <button key={r.id} onClick={() => setEditingRecord(r)}
+            className="w-full text-left rounded-2xl ring-1 ring-white/10 bg-zinc-900 p-4 active:opacity-80 transition">
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <p className="font-mono text-sm font-semibold text-zinc-200">{fmtDate(r.date)}</p>
+                <p className="font-mono text-xs text-zinc-400">{fmtKm(r.km)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {r.cost != null && <span className="font-mono text-xs text-amber-400/90">{r.cost.toLocaleString("el-GR")}€</span>}
+                <span onClick={(e) => { e.stopPropagation(); onDeleteRecord(r.id); }}
+                  className="text-zinc-400 hover:text-rose-400 p-1 -m-1"><Trash2 size={14} /></span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-1.5">
+              {r.items.map((it, idx) => (
+                <span key={idx} className="rounded-full bg-white/5 px-2 py-0.5 text-xs font-body text-zinc-300">{it}</span>
+              ))}
+            </div>
+            {r.notes && <p className="font-body text-xs text-zinc-400 mt-1.5">{r.notes}</p>}
+          </button>
+        ))}
+      </div>
+
+      {showForm && (
+        <ServiceForm vehicle={vehicle} categories={categories} onCategoriesChange={onCategoriesChange} onCancel={() => setShowForm(false)}
+          onSave={(rec) => { onAddRecord(rec); setShowForm(false); }} />
+      )}
+      {editingRecord && (
+        <ServiceForm vehicle={vehicle} initial={editingRecord} categories={categories} onCategoriesChange={onCategoriesChange} onCancel={() => setEditingRecord(null)}
+          onSave={(rec) => { onEditRecord(rec); setEditingRecord(null); }}
+          onDelete={(id) => { onDeleteRecord(id); setEditingRecord(null); }} />
+      )}
+      {showKteoEdit && (
+        <KteoQuickEdit vehicle={vehicle} onCancel={() => setShowKteoEdit(false)}
+          onSave={(patch) => { onQuickUpdate(vehicle.id, patch); setShowKteoEdit(false); }} />
+      )}
+      {showOilEdit && (
+        <OilQuickEdit vehicle={vehicle} onCancel={() => setShowOilEdit(false)}
+          onSave={(patch) => { onQuickUpdate(vehicle.id, patch); setShowOilEdit(false); }} />
+      )}
+    </div>
+  );
+}
+
+// ---------- Quick edit: ΚΤΕΟ ----------
+function KteoQuickEdit({ vehicle, onSave, onCancel }) {
+  const [kteoExpiry, setKteoExpiry] = useState(vehicle.kteoExpiry || "");
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="w-full sm:max-w-sm overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide flex items-center gap-1.5">
+            <CalendarClock size={17} className="text-amber-400" /> Λήξη ΚΤΕΟ
+          </h2>
+          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
+        </div>
+        <label className="font-body text-xs text-zinc-400 mb-1 block">Ημερομηνία λήξης</label>
+        <input type="date" value={kteoExpiry} onChange={(e) => setKteoExpiry(e.target.value)}
+          name="kteo-quick-field" autoComplete="off" onFocus={keepVisible} autoFocus
+          className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark] mb-5" />
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">Άκυρο</button>
+          <button onClick={() => onSave({ kteoExpiry: kteoExpiry || null })}
+            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold flex items-center justify-center gap-1.5">
+            <Save size={15} /> Αποθήκευση
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Quick edit: Λάδια ----------
+function OilQuickEdit({ vehicle, onSave, onCancel }) {
+  const [lastOilDate, setLastOilDate] = useState(vehicle.lastOilDate || "");
+  const [lastOilKm, setLastOilKm] = useState(vehicle.lastOilKm ?? "");
+  const [oilIntervalKm, setOilIntervalKm] = useState(vehicle.oilIntervalKm ?? 10000);
+  const [oilIntervalMonths, setOilIntervalMonths] = useState(vehicle.oilIntervalMonths ?? 12);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="w-full sm:max-w-sm overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide flex items-center gap-1.5">
+            <Droplet size={17} className="text-amber-400" /> Λάδια
+          </h2>
+          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
+        </div>
+
+        <div className="flex gap-3 mb-3">
+          <div className="flex-1">
+            <label className="font-body text-xs text-zinc-400 mb-1 block">Τελευταία αλλαγή</label>
+            <input type="date" value={lastOilDate} onChange={(e) => setLastOilDate(e.target.value)}
+              name="oil-quick-date-field" autoComplete="off" onFocus={keepVisible}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
+          </div>
+          <div className="flex-1">
+            <label className="font-body text-xs text-zinc-400 mb-1 block">Χλμ τότε</label>
+            <input value={lastOilKm} onChange={(e) => setLastOilKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+              name="oil-quick-km-field" {...noAutofill}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+          </div>
+        </div>
+
+        <label className="font-body text-xs text-zinc-400 mb-1 block">Διάστημα αλλαγής</label>
+        <div className="flex gap-3 mb-5">
+          <div className="flex-1 relative">
+            <input value={oilIntervalKm} onChange={(e) => setOilIntervalKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+              name="oil-quick-interval-km-field" {...noAutofill}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">χλμ</span>
+          </div>
+          <div className="flex-1 relative">
+            <input value={oilIntervalMonths} onChange={(e) => setOilIntervalMonths(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
+              name="oil-quick-interval-months-field" {...noAutofill}
+              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">μήνες</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">Άκυρο</button>
+          <button
+            onClick={() => onSave({
+              lastOilDate: lastOilDate || null,
+              lastOilKm: lastOilKm !== "" ? Number(lastOilKm) : null,
+              oilIntervalKm: oilIntervalKm ? Number(oilIntervalKm) : 10000,
+              oilIntervalMonths: oilIntervalMonths ? Number(oilIntervalMonths) : 12,
+            })}
+            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold flex items-center justify-center gap-1.5">
+            <Save size={15} /> Αποθήκευση
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Vehicle Card (list) ----------
+function VehicleCard({ vehicle, onOpen }) {
+  const kteo = kteoStatus(vehicle);
+  const oil = oilStatus(vehicle);
+  return (
+    <button onClick={() => onOpen(vehicle)}
+      className="w-full text-left bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-4 active:opacity-80 transition">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-9 w-9 rounded-xl bg-amber-400/10 flex items-center justify-center shrink-0">
+            <VehicleIcon type={vehicle.type} size={17} className="text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-sm font-semibold text-zinc-50 uppercase tracking-wide truncate">{vehicle.brand} {vehicle.model}</p>
+            <p className="font-mono text-xs text-zinc-400 tracking-widest">{vehicle.plate}</p>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="font-mono text-sm font-semibold text-zinc-200">{fmtKm(vehicle.currentKm)}</p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <StatusPill level={kteo.level} icon={CalendarClock}>
+          ΚΤΕΟ {kteo.days == null ? "—" : kteo.days < 0 ? "ληγμένο" : `${kteo.days}η`}
+        </StatusPill>
+        <StatusPill level={oil.level} icon={Droplet}>
+          Λάδια {oil.remKm == null ? "—" : oil.remKm < 0 ? "τώρα" : `${fmtKm(oil.remKm)}`}
+        </StatusPill>
+      </div>
+    </button>
+  );
+}
+
+// ---------- Main App ----------
+function VehicleHistoryApp() {
+  const [vehicles, setVehicles] = useState([]);
+  const [records, setRecords] = useState({}); // { vehicleId: [records] }
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [loaded, setLoaded] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [showVehicleForm, setShowVehicleForm] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const v = await storage.get("vehicles");
+        const list = v ? JSON.parse(v.value) : [];
+        setVehicles(list);
+        const recEntries = await Promise.all(list.map(async (veh) => {
+          try {
+            const r = await storage.get(`service:${veh.id}`);
+            return [veh.id, r ? JSON.parse(r.value) : []];
+          } catch { return [veh.id, []]; }
+        }));
+        setRecords(Object.fromEntries(recEntries));
+      } catch (e) {
+        setVehicles([]);
+      }
+      try {
+        const c = await storage.get("service-categories");
+        if (c) setCategories(JSON.parse(c.value));
+      } catch (e) { /* keep defaults */ }
+      setLoaded(true);
+    })();
+  }, []);
+
+  const persistCategories = async (list) => {
+    setCategories(list);
+    try { await storage.set("service-categories", JSON.stringify(list)); }
+    catch { setError("Αποτυχία αποθήκευσης."); }
+  };
+
+  const persistVehicles = async (list) => {
+    setVehicles(list);
+    try {
+      await storage.set("vehicles", JSON.stringify(list));
+    } catch {
+      try { await storage.set("vehicles", JSON.stringify(list)); }
+      catch { setError("Αποτυχία αποθήκευσης."); }
+    }
+  };
+
+  const persistRecords = async (vehicleId, list) => {
+    setRecords((prev) => ({ ...prev, [vehicleId]: list }));
+    try {
+      await storage.set(`service:${vehicleId}`, JSON.stringify(list));
+    } catch {
+      try { await storage.set(`service:${vehicleId}`, JSON.stringify(list)); }
+      catch { setError("Αποτυχία αποθήκευσης."); }
+    }
+  };
+
+  const saveVehicle = (vehicle) => {
+    const exists = vehicles.some((v) => v.id === vehicle.id);
+    const next = exists ? vehicles.map((v) => (v.id === vehicle.id ? vehicle : v)) : [...vehicles, vehicle];
+    persistVehicles(next);
+    if (!exists) setRecords((prev) => ({ ...prev, [vehicle.id]: [] }));
+    setShowVehicleForm(false);
+    setEditingVehicle(null);
+  };
+
+  const deleteVehicle = (id) => {
+    persistVehicles(vehicles.filter((v) => v.id !== id));
+    setRecords((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    setShowVehicleForm(false);
+    setEditingVehicle(null);
+    if (selectedId === id) setSelectedId(null);
+  };
+
+  const quickUpdateVehicle = (id, patch) => {
+    persistVehicles(vehicles.map((v) => (v.id === id ? { ...v, ...patch } : v)));
+  };
+
+  const recomputeOilFields = (veh, list) => {
+    const oilRecords = list.filter((r) => r.items.includes("Αλλαγή λαδιών κινητήρα"));
+    let lastOilKm = null, lastOilDate = null;
+    if (oilRecords.length) {
+      const latest = [...oilRecords].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+      lastOilKm = Number(latest.km) || 0;
+      lastOilDate = latest.date;
+    }
+    const maxKm = list.reduce((m, r) => Math.max(m, Number(r.km) || 0), Number(veh.currentKm) || 0);
+    return { ...veh, lastOilKm, lastOilDate, currentKm: maxKm };
+  };
+
+  const addRecord = async (vehicleId, rec) => {
+    const list = [...(records[vehicleId] || []), rec];
+    await persistRecords(vehicleId, list);
+    const veh = vehicles.find((v) => v.id === vehicleId);
+    if (veh) await persistVehicles(vehicles.map((v) => (v.id === vehicleId ? recomputeOilFields(veh, list) : v)));
+  };
+
+  const editRecord = async (vehicleId, rec) => {
+    const list = (records[vehicleId] || []).map((r) => (r.id === rec.id ? rec : r));
+    await persistRecords(vehicleId, list);
+    const veh = vehicles.find((v) => v.id === vehicleId);
+    if (veh) await persistVehicles(vehicles.map((v) => (v.id === vehicleId ? recomputeOilFields(veh, list) : v)));
+  };
+
+  const deleteRecord = async (vehicleId, recId) => {
+    const list = (records[vehicleId] || []).filter((r) => r.id !== recId);
+    await persistRecords(vehicleId, list);
+    const veh = vehicles.find((v) => v.id === vehicleId);
+    if (veh) await persistVehicles(vehicles.map((v) => (v.id === vehicleId ? recomputeOilFields(veh, list) : v)));
+  };
+
+  const selected = vehicles.find((v) => v.id === selectedId);
+
+  const sortedVehicles = useMemo(() => {
+    const rank = (v) => {
+      const k = kteoStatus(v), o = oilStatus(v);
+      const lv = (s) => (s === "danger" ? 0 : s === "warn" ? 1 : s === "unknown" ? 2 : 3);
+      return Math.min(lv(k.level), lv(o.level));
+    };
+    return [...vehicles].sort((a, b) => rank(a) - rank(b));
+  }, [vehicles]);
+
+  const alerts = useMemo(() => vehicles.filter((v) => {
+    const k = kteoStatus(v), o = oilStatus(v);
+    return k.level === "danger" || k.level === "warn" || o.level === "danger" || o.level === "warn";
+  }), [vehicles]);
+
+  if (!loaded) {
+    return (
+      <div className="h-full min-h-screen flex items-center justify-center bg-zinc-950">
+        <style>{FONT_STYLE}</style>
+        <Gauge className="text-amber-400 animate-pulse" size={28} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-50">
+      <style>{FONT_STYLE}</style>
+
+      {selected ? (
+        <VehicleDetail
+          vehicle={selected}
+          records={records[selected.id] || []}
+          categories={categories}
+          onCategoriesChange={persistCategories}
+          onBack={() => setSelectedId(null)}
+          onEdit={(v) => setEditingVehicle(v)}
+          onQuickUpdate={quickUpdateVehicle}
+          onAddRecord={(rec) => addRecord(selected.id, rec)}
+          onEditRecord={(rec) => editRecord(selected.id, rec)}
+          onDeleteRecord={(id) => deleteRecord(selected.id, id)}
+        />
+      ) : (
+        <div className="pb-8">
+          <div className="px-4 pt-5 pb-4">
+            <p className="font-body text-xs text-amber-400/80 font-medium uppercase tracking-widest mb-0.5">Γκαράζ</p>
+            <h1 className="font-display text-2xl font-bold text-zinc-50 uppercase tracking-wide">Ιστορικό οχημάτων</h1>
+          </div>
+
+          {alerts.length > 0 && (
+            <div className="px-4 mb-4">
+              <div className="rounded-2xl bg-amber-400/10 ring-1 ring-amber-400/30 p-3.5 flex items-start gap-2.5">
+                <AlertTriangle size={17} className="text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-body text-sm font-medium text-amber-300">
+                    {alerts.length} {alerts.length === 1 ? "όχημα χρειάζεται προσοχή" : "οχήματα χρειάζονται προσοχή"}
+                  </p>
+                  <p className="font-body text-xs text-amber-400/70 mt-0.5">ΚΤΕΟ ή αλλαγή λαδιών πλησιάζει ή έχει λήξει.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="px-4 space-y-3">
+            {sortedVehicles.map((v) => <VehicleCard key={v.id} vehicle={v} onOpen={(veh) => setSelectedId(veh.id)} />)}
+          </div>
+
+          {vehicles.length === 0 && (
+            <div className="px-4">
+              <div className="rounded-2xl ring-1 ring-white/10 bg-zinc-900 p-8 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-amber-400/10 flex items-center justify-center mx-auto mb-3">
+                  <Car size={22} className="text-amber-400" />
+                </div>
+                <p className="font-body text-sm text-zinc-300 font-medium mb-1">Δεν έχεις προσθέσει όχημα ακόμη</p>
+                <p className="font-body text-xs text-zinc-400">Πρόσθεσε αυτοκίνητο ή μηχανή για να ξεκινήσεις το ιστορικό του.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="px-4 mt-4">
+            <button onClick={() => setShowVehicleForm(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold">
+              <Plus size={17} /> Προσθήκη οχήματος
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(showVehicleForm || editingVehicle) && (
+        <VehicleForm
+          initial={editingVehicle}
+          onCancel={() => { setShowVehicleForm(false); setEditingVehicle(null); }}
+          onSave={saveVehicle}
+          onDelete={deleteVehicle}
+        />
+      )}
+
+      {error && (
+        <div className="fixed bottom-4 left-4 right-4 bg-rose-500/90 text-white text-xs font-body rounded-xl px-4 py-2.5 text-center">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<VehicleHistoryApp />);
+</script>
+</body>
+</html>
