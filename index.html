@@ -1,1480 +1,1020 @@
 <!DOCTYPE html>
 <html lang="el">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ιστορικό Οχημάτων</title>
-<meta name="description" content="Διαχείριση ΚΤΕΟ, αλλαγών λαδιών και ιστορικού service για τα οχήματά σου." />
-
-<!-- Home screen / PWA icon setup -->
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
-<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png" />
-<meta name="theme-color" content="#09090b" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Οχήματα" />
-
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js" crossorigin></script>
-<script src="https://cdn.tailwindcss.com"></script>
-
+<meta name="description" content="ΚΤΕΟ, αλλαγές λαδιών και ιστορικό service για τα οχήματά σου.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
+<meta name="theme-color" content="#0b0b0d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Οχήματα">
 <style>
-  html, body { margin: 0; padding: 0; background: #09090b; }
-  #root { min-height: 100vh; }
-  #errbox { display:none; color:#fca5a5; background:#111; font:13px/1.5 monospace;
-            padding:16px; white-space:pre-wrap; word-break:break-word; }
+:root{
+  --bg:#0b0b0d; --card:#17181c; --card2:#1f2026; --line:rgba(255,255,255,.10);
+  --line2:rgba(255,255,255,.16); --txt:#f4f4f5; --dim:#a1a1aa; --dim2:#71717a;
+  --acc:#fbbf24; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185; --sky:#38bdf8;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px}
+body{padding-bottom:env(safe-area-inset-bottom)}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:.02em}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,textarea,select{font:inherit;width:100%;background:#000;color:var(--txt);
+  border:1px solid var(--line2);border-radius:10px;padding:11px 12px;outline:none;
+  color-scheme:dark;-webkit-appearance:none;appearance:none}
+input:focus,textarea:focus,select:focus{border-color:rgba(251,191,36,.6)}
+select{background-image:none}
+textarea{resize:none}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+.hdr{display:flex;align-items:center;gap:12px;padding:18px 0 14px}
+.eyebrow{color:var(--acc);font-size:11px;font-weight:700;letter-spacing:.18em;
+  text-transform:uppercase;margin-bottom:2px}
+.ttl{font-size:23px;text-transform:uppercase}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.row{display:flex;gap:12px}
+.row>*{flex:1;min-width:0}
+.lbl{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+.hint{font-size:12px;color:var(--dim2);margin-top:5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;
+  border-radius:12px;padding:13px;font-size:14px;font-weight:600}
+.btn-p{background:var(--acc);color:#18181b}
+.btn-s{background:var(--card2);color:#e4e4e7;border:1px solid var(--line)}
+.btn-d{background:rgba(244,63,94,.12);color:var(--bad);border:1px solid rgba(244,63,94,.3);flex:0 0 auto;padding:13px 15px}
+.btn:disabled{opacity:.4}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;
+  padding:7px 13px;font-size:12.5px;font-weight:500;border:1px solid var(--line2);
+  background:rgba(255,255,255,.06);color:#e4e4e7}
+.chip.on{background:rgba(251,191,36,.16);color:#fcd34d;border-color:rgba(251,191,36,.45)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;
+  padding:5px 10px;font-size:11.5px;font-weight:600}
+.dot{width:6px;height:6px;border-radius:999px;flex:0 0 auto}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .unk{color:var(--dim)}
+.bg-ok{background:rgba(52,211,153,.12)} .bg-warn{background:rgba(251,191,36,.12)}
+.bg-bad{background:rgba(251,113,133,.12)} .bg-unk{background:rgba(161,161,170,.12)}
+.d-ok{background:var(--ok)} .d-warn{background:var(--warn)}
+.d-bad{background:var(--bad)} .d-unk{background:var(--dim2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gauge{display:flex;flex-direction:column;align-items:center;padding:14px 10px;text-align:center}
+.gauge svg{transform:rotate(-90deg)}
+.gwrap{position:relative;display:flex;align-items:center;justify-content:center}
+.gtxt{position:absolute;display:flex;flex-direction:column;align-items:center}
+.gval{font-size:19px;font-weight:700}
+.gsub{font-size:10.5px;color:var(--dim);margin-top:1px}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;padding:0}
+.sheet{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:var(--card);
+  border:1px solid var(--line2);border-radius:18px 18px 0 0;padding:18px;
+  padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:640px){.modal{align-items:center}.sheet{border-radius:18px}}
+.sheet-h{display:flex;align-items:center;justify-content:between;margin-bottom:16px}
+.x{margin-left:auto;color:var(--dim);padding:4px}
+.fld{margin-bottom:12px}
+.divider{border-top:1px solid var(--line);margin:14px 0 12px}
+.ac{position:relative}
+.aclist{position:absolute;z-index:20;top:calc(100% + 5px);left:0;right:0;max-height:190px;
+  overflow-y:auto;background:#000;border:1px solid var(--line2);border-radius:10px;padding:4px}
+.acitem{display:block;width:100%;text-align:left;padding:9px 11px;font-size:14px;
+  color:#e4e4e7;border-radius:7px}
+.acitem:active{background:rgba(251,191,36,.16);color:#fcd34d}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:5px;margin:0 -2px}
+.tab{flex:0 0 auto;display:flex;align-items:center;gap:6px;border-radius:12px;
+  padding:9px 12px;font-size:12.5px;font-weight:600;border:1px solid var(--line);
+  background:rgba(255,255,255,.05);color:var(--dim)}
+.tab.on{background:rgba(251,191,36,.16);color:#fcd34d;border-color:rgba(251,191,36,.45)}
+.cnt{background:rgba(0,0,0,.35);border-radius:999px;padding:2px 6px;font-size:10px}
+.pool{background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:14px;
+  padding:11px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:7px}
+.rec{display:block;width:100%;text-align:left;padding:14px;margin-bottom:10px}
+.rec:active{opacity:.75}
+.tag{background:rgba(255,255,255,.07);border-radius:999px;padding:3px 9px;font-size:11.5px;color:#d4d4d8}
+.empty{text-align:center;padding:26px 18px;color:var(--dim)}
+.alert{display:flex;gap:10px;align-items:flex-start;background:rgba(251,191,36,.1);
+  border:1px solid rgba(251,191,36,.3);border-radius:16px;padding:13px;margin-bottom:14px}
+.mgr{border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.35);
+  margin-bottom:8px;overflow:hidden}
+.mgr-h{display:flex;align-items:center;gap:8px;padding:9px}
+.mgr-b{padding:0 9px 9px;border-top:1px solid var(--line)}
+.ic{display:flex;align-items:center;justify-content:center;width:28px;height:28px;
+  border-radius:8px;flex:0 0 auto}
+.iconbtn{padding:6px;color:var(--dim);flex:0 0 auto}
+.iconbtn:disabled{opacity:.2}
+.sub{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.05);
+  border-radius:9px;padding:7px 10px;margin-top:7px}
+.swatch{width:28px;height:28px;border-radius:999px;opacity:.45}
+.swatch.on{opacity:1;outline:2px solid #fff;outline-offset:2px}
+.toast{position:fixed;left:16px;right:16px;bottom:18px;z-index:80;background:rgba(244,63,94,.95);
+  color:#fff;border-radius:12px;padding:12px;text-align:center;font-size:13px}
+svg.i{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em;flex:0 0 auto}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<div id="errbox"></div>
-
+<div id="app"></div>
 <script>
-// Surface any load/runtime error on screen instead of leaving a blank page.
-(function () {
-  var shown = false;
-  function show(msg) {
-    if (shown) return;          // keep the FIRST (real) error, don't overwrite it
-    shown = true;
-    var b = document.getElementById("errbox");
-    if (!b) return;
-    b.style.display = "block";
-    b.textContent = "ΣΦΑΛΜΑ:\n" + msg;
+"use strict";
+/* ---------------- Icons (inline, nothing loaded from the network) ------------- */
+var ICONS = {
+  plus:["M5 12h14","M12 5v14"],
+  x:["M18 6 6 18","m6 6 12 12"],
+  car:["M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2","M7 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0","M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0","M9 17h6"],
+  bike:["M18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z","M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z","M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z","M12 17.5V14l-3-3 4-3 2 3h2"],
+  gauge:["m12 14 4-4","M3.34 19a10 10 0 1 1 17.32 0"],
+  calendar:["M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5","M16 2v4","M8 2v4","M3 10h5","M17.5 17.5 16 16.3V14","M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"],
+  wrench:["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"],
+  back:["m15 18-6-6 6-6"],
+  up:["m18 15-6-6-6 6"],
+  down:["m6 9 6 6 6-6"],
+  alert:["m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z","M12 9v4","M12 17h.01"],
+  check:["M22 11.08V12a10 10 0 1 1-5.93-9.14","m9 11 3 3L22 4"],
+  trash:["M3 6h18","M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6","M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2","M10 11v6","M14 11v6"],
+  settings:["M20 7h-9","M14 17H5","M17 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6z","M7 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"],
+  history:["M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8","M3 3v5h5","M12 7v5l4 2"],
+  droplet:["M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"],
+  fuel:["M3 22h12","M4 9h10","M14 22V4c0-1-1-2-2-2H6C5 2 4 3 4 4v18","M14 13h2c1 0 2 1 2 2v3c0 1 1 1 1 1s1 0 1-1V9.8c0-.5-.2-1-.6-1.4L18 7"],
+  save:["M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z","M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7","M7 3v4a1 1 0 0 0 1 1h7"],
+  pen:["M12 20h9","M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"],
+  disc:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"],
+  battery:["M16 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z","M22 11v2"],
+  wind:["M12.8 19.6A2 2 0 1 0 14 16H2","M17.5 8a2.5 2.5 0 1 1 2 4H2","M9.8 4.4A2 2 0 1 1 11 8H2"],
+  cog:["M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z","M12 2v2","M12 20v2","m4.9 4.9 1.4 1.4","m17.7 17.7 1.4 1.4","M2 12h2","M20 12h2","m4.9 19.1 1.4-1.4","m17.7 6.3 1.4-1.4"],
+  spark:["m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z","M5 3v4","M3 5h4"],
+  folder:["M12 10v6","M9 13h6","M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"],
+  layers:["m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z","m22 12.5-9.17 4.16a2 2 0 0 1-1.66 0L2 12.5","m22 17.5-9.17 4.16a2 2 0 0 1-1.66 0L2 17.5"],
+  trend:["M16 7h6v6","m22 7-8.5 8.5-5-5L2 17"]
+};
+function icon(name, size){
+  var p = ICONS[name]; if(!p) return "";
+  var d = p.map(function(x){ return '<path d="'+x+'"/>'; }).join("");
+  var s = size || 18;
+  return '<svg class="i" viewBox="0 0 24 24" style="width:'+s+'px;height:'+s+'px">'+d+'</svg>';
+}
+
+/* ---------------- Small helpers ---------------- */
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function uid(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36); }
+function todayISO(){
+  var d=new Date(), m=d.getMonth()+1, day=d.getDate();
+  return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day;
+}
+function num(v){ var n=Number(v); return isFinite(n)?n:0; }
+function fmtDate(iso){
+  if(!iso) return "—";
+  var p=iso.split("-"); if(p.length!==3) return "—";
+  var M=["Ιαν","Φεβ","Μαρ","Απρ","Μάι","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
+  return Number(p[2])+" "+M[Number(p[1])-1]+" "+p[0];
+}
+function fmtKm(n){
+  if(n==null||n==="") return "—";
+  return num(n).toLocaleString("el-GR")+" χλμ";
+}
+function daysBetween(a,b){
+  if(!a||!b) return null;
+  var d1=new Date(a+"T00:00:00"), d2=new Date(b+"T00:00:00");
+  return Math.round((d2-d1)/86400000);
+}
+function addDays(iso,n){
+  var d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+n);
+  var m=d.getMonth()+1, day=d.getDate();
+  return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day;
+}
+
+/* ---------------- Storage (device-local, survives restarts) ---------------- */
+var DB = {
+  read:function(key,fallback){
+    try{ var v=localStorage.getItem(key); return v==null?fallback:JSON.parse(v); }
+    catch(e){ return fallback; }
+  },
+  write:function(key,val){
+    try{ localStorage.setItem(key,JSON.stringify(val)); return true; }
+    catch(e){ return false; }
   }
-  window.addEventListener("error", function (e) {
-    show((e.message || e.error) + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+};
+
+/* ---------------- Defaults ---------------- */
+var DEFAULTS = { car:{km:10000,months:12}, moto:{km:3000,months:6} };
+
+var DEFAULT_CATS = [
+  {key:"engine",label:"Κινητήρας",icon:"cog",color:"amber",
+   items:["Αλλαγή λαδιών κινητήρα","Φίλτρο λαδιού","Φίλτρο αέρα","Φίλτρο καυσίμου","Μπουζί","Ιμάντας χρονισμού / καδένα","Ψυκτικό υγρό"]},
+  {key:"brakes",label:"Φρένα",icon:"disc",color:"rose",
+   items:["Τακάκια φρένων εμπρός","Τακάκια φρένων πίσω","Δίσκοι φρένων","Υγρό φρένων"]},
+  {key:"chassis",label:"Ανάρτηση & Ελαστικά",icon:"wind",color:"sky",
+   items:["Ελαστικά","Αμορτισέρ","Αλυσίδα & γρανάζια (μηχανή)"]},
+  {key:"electrical",label:"Ηλεκτρικά & Καμπίνα",icon:"battery",color:"emerald",
+   items:["Μπαταρία","Φίλτρο καμπίνας (γύρης)"]},
+  {key:"other",label:"Λοιπά",icon:"spark",color:"violet",
+   items:["ΚΤΕΟ","Γενικό service"]}
+];
+var OIL_ITEM = "Αλλαγή λαδιών κινητήρα";
+
+var COLORS = {
+  amber:"#fbbf24", rose:"#fb7185", sky:"#38bdf8", emerald:"#34d399",
+  violet:"#a78bfa", orange:"#fb923c", teal:"#2dd4bf", fuchsia:"#e879f9"
+};
+var COLOR_KEYS = Object.keys(COLORS);
+var ICON_KEYS = ["cog","disc","wind","battery","spark","wrench","droplet","fuel","gauge","layers"];
+
+var CAR_BRANDS = ["Toyota","Volkswagen","Opel","Peugeot","Renault","Citroën","Fiat","Ford","Hyundai","Kia","Nissan","Honda","Mazda","Suzuki","Škoda","Seat","BMW","Mercedes-Benz","Audi","Volvo","Mitsubishi","Chevrolet","Dacia","Mini","Smart","Alfa Romeo","Jeep","Land Rover","Lexus","Subaru","Chrysler","Jaguar","Porsche","Tesla","SsangYong","Lancia","Daihatsu"];
+var MOTO_BRANDS = ["Yamaha","Honda","Suzuki","Kawasaki","Piaggio","Vespa","KTM","BMW Motorrad","Aprilia","Triumph","Ducati","Harley-Davidson","SYM","Kymco","Peugeot Motocycles","Benelli","Royal Enfield","Husqvarna","Derbi","MV Agusta","Malaguti"];
+
+/* ---------------- Status calculations ---------------- */
+function kteoStatus(v){
+  if(!v.kteoExpiry) return {level:"unk",label:"Δεν έχει οριστεί",days:null};
+  var d = daysBetween(todayISO(), v.kteoExpiry);
+  if(d<0)  return {level:"bad", label:"Έληξε πριν "+Math.abs(d)+" ημέρες", days:d};
+  if(d<=30)return {level:"warn",label:"Λήγει σε "+d+" ημέρες", days:d};
+  return {level:"ok", label:"Ισχύει ακόμη "+d+" ημέρες", days:d};
+}
+function avgKmPerYear(v){
+  if(!v.purchaseDate) return null;
+  var days = daysBetween(v.purchaseDate, todayISO());
+  if(days==null || days<=0) return null;
+  var driven = num(v.currentKm) - num(v.kmAtPurchase);
+  if(driven<=0) return null;
+  var years = Math.max(days/365, 30/365);
+  return driven/years;
+}
+function oilStatus(v){
+  var avg = avgKmPerYear(v);
+  if(!v.lastOilDate || v.lastOilKm==null)
+    return {level:"unk",remKm:null,remDays:null,avg:avg,estMonths:null,nextDate:null};
+  var intKm = num(v.oilIntervalKm)||10000;
+  var intMo = num(v.oilIntervalMonths)||12;
+  var nextKm = num(v.lastOilKm)+intKm;
+  var nextDate = addDays(v.lastOilDate, intMo*30);
+  var remKm = nextKm-num(v.currentKm);
+  var remDays = daysBetween(todayISO(), nextDate);
+  var estMonths=null;
+  if(avg && remKm>0) estMonths = Math.round((remKm/avg)*12);
+  var level="ok";
+  if(remKm<=0 || remDays<=0) level="bad";
+  else if(remKm<=1000 || remDays<=30) level="warn";
+  return {level:level,remKm:remKm,remDays:remDays,nextKm:nextKm,
+          nextDate:nextDate,avg:avg,estMonths:estMonths};
+}
+/* ---------------- App state ---------------- */
+var S = {
+  vehicles: DB.read("veh.vehicles", []),
+  records:  DB.read("veh.records", {}),
+  cats:     DB.read("veh.cats", DEFAULT_CATS),
+  selected: null,
+  modal: null,     // {type, ...}
+  draft: {},       // scratch state for the open modal
+  toast: ""
+};
+function saveVehicles(){ if(!DB.write("veh.vehicles",S.vehicles)) toast("Αποτυχία αποθήκευσης."); }
+function saveRecords(){ if(!DB.write("veh.records",S.records)) toast("Αποτυχία αποθήκευσης."); }
+function saveCats(){ if(!DB.write("veh.cats",S.cats)) toast("Αποτυχία αποθήκευσης."); }
+function toast(m){ S.toast=m; render(); setTimeout(function(){ S.toast=""; render(); },2600); }
+
+function recsOf(id){ return S.records[id] || []; }
+function vehicleById(id){
+  for(var i=0;i<S.vehicles.length;i++) if(S.vehicles[i].id===id) return S.vehicles[i];
+  return null;
+}
+/* Recompute oil fields + odometer from the full service history. */
+function syncFromHistory(id){
+  var v = vehicleById(id); if(!v) return;
+  var list = recsOf(id);
+  var oils = list.filter(function(r){ return r.items.indexOf(OIL_ITEM)>=0; });
+  if(oils.length){
+    var latest = oils.slice().sort(function(a,b){ return a.date<b.date?1:-1; })[0];
+    v.lastOilKm = num(latest.km); v.lastOilDate = latest.date;
+  } else { v.lastOilKm=null; v.lastOilDate=null; }
+  var max = num(v.currentKm);
+  list.forEach(function(r){ if(num(r.km)>max) max=num(r.km); });
+  v.currentKm = max;
+  saveVehicles();
+}
+
+/* ---------------- Reusable bits ---------------- */
+function statusPill(level,label){
+  return '<span class="pill bg-'+level+' '+level+'">'+
+    '<span class="dot d-'+level+'"></span>'+esc(label)+'</span>';
+}
+function gauge(level,val,sub,pct){
+  var col = level==="ok"?"var(--ok)":level==="warn"?"var(--warn)":level==="bad"?"var(--bad)":"var(--dim2)";
+  var C = 2*Math.PI*40, p = Math.max(0,Math.min(100,pct||0));
+  return '<div class="gwrap">'+
+    '<svg width="104" height="104" viewBox="0 0 100 100">'+
+      '<circle cx="50" cy="50" r="40" fill="none" stroke="#2b2c31" stroke-width="9"/>'+
+      '<circle cx="50" cy="50" r="40" fill="none" stroke="'+col+'" stroke-width="9"'+
+      ' stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+(C*(1-p/100))+'"/>'+
+    '</svg>'+
+    '<span class="gtxt"><span class="gval '+level+'">'+esc(val)+'</span>'+
+    '<span class="gsub">'+esc(sub)+'</span></span></div>';
+}
+
+/* ---------------- Screen: vehicle list ---------------- */
+function viewList(){
+  var alerts = S.vehicles.filter(function(v){
+    var k=kteoStatus(v).level, o=oilStatus(v).level;
+    return k==="bad"||k==="warn"||o==="bad"||o==="warn";
   });
-  window.addEventListener("unhandledrejection", function (e) {
-    show("Promise: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
-  });
-  // Also capture Babel compile errors, which are reported via console.error.
-  var origErr = console.error;
-  console.error = function () {
-    try {
-      var parts = [];
-      for (var i = 0; i < arguments.length; i++) {
-        var a = arguments[i];
-        parts.push(a && a.message ? a.message : String(a));
-      }
-      show(parts.join(" "));
-    } catch (_) {}
-    return origErr.apply(console, arguments);
+  var rank = function(v){
+    var m = {bad:0,warn:1,unk:2,ok:3};
+    return Math.min(m[kteoStatus(v).level], m[oilStatus(v).level]);
   };
-  window.addEventListener("load", function () {
-    setTimeout(function () {
-      var missing = [];
-      if (!window.React) missing.push("React");
-      if (!window.ReactDOM) missing.push("ReactDOM");
-      if (!window.Babel) missing.push("Babel");
-      if (missing.length) show("Δεν φόρτωσαν οι βιβλιοθήκες: " + missing.join(", "));
-      else if (!document.getElementById("root").hasChildNodes())
-        show("Οι βιβλιοθήκες φόρτωσαν αλλά η εφαρμογή δεν ζωγραφίστηκε.");
-    }, 8000);
-  });
-})();
-</script>
+  var sorted = S.vehicles.slice().sort(function(a,b){ return rank(a)-rank(b); });
 
-<script type="text/plain" id="app-src">
-const { useState, useEffect, useMemo } = React;
+  var h = '<div class="wrap"><div style="padding:20px 0 16px">'+
+    '<div class="eyebrow">Γκαράζ</div><h1 class="ttl">Ιστορικό οχημάτων</h1></div>';
 
-// ---------- Minimal localStorage-backed storage shim ----------
-// (Mirrors the shape of Claude's artifact window.storage API so the
-// rest of the app code needs no further changes.)
-const storage = {
-  async get(key) {
-    try {
-      const v = localStorage.getItem(key);
-      return v === null ? null : { key, value: v };
-    } catch { return null; }
-  },
-  async set(key, value) {
-    try { localStorage.setItem(key, value); return { key, value }; }
-    catch { return null; }
-  },
-};
-
-// ---------- Lucide icon adapter ----------
-// Inline icon paths — no external icon CDN, so nothing here can fail to load.
-const ICON_PATHS = {
-  "plus": ["M5 12h14", "M12 5v14"],
-  "x": ["M18 6 6 18", "m6 6 12 12"],
-  "car": ["M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2", "M7 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0", "M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0", "M9 17h6"],
-  "bike": ["M18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z", "M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z", "M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z", "M12 17.5V14l-3-3 4-3 2 3h2"],
-  "gauge": ["m12 14 4-4", "M3.34 19a10 10 0 1 1 17.32 0"],
-  "calendar-clock": ["M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5", "M16 2v4", "M8 2v4", "M3 10h5", "M17.5 17.5 16 16.3V14", "M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"],
-  "wrench": ["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"],
-  "chevron-left": ["m15 18-6-6 6-6"],
-  "chevron-up": ["m18 15-6-6-6 6"],
-  "chevron-down": ["m6 9 6 6 6-6"],
-  "alert-triangle": ["m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z", "M12 9v4", "M12 17h.01"],
-  "check-circle-2": ["M22 11.08V12a10 10 0 1 1-5.93-9.14", "m9 11 3 3L22 4"],
-  "trash-2": ["M3 6h18", "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6", "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2", "M10 11v6", "M14 11v6"],
-  "settings-2": ["M20 7h-9", "M14 17H5", "M17 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "M7 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"],
-  "history": ["M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", "M3 3v5h5", "M12 7v5l4 2"],
-  "droplet": ["M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"],
-  "fuel": ["M3 22h12", "M4 9h10", "M14 22V4c0-1-1-2-2-2H6C5 2 4 3 4 4v18", "M14 13h2c1 0 2 1 2 2v3c0 1 1 1 1 1s1 0 1-1V9.8c0-.5-.2-1-.6-1.4L18 7"],
-  "save": ["M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z", "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7", "M7 3v4a1 1 0 0 0 1 1h7"],
-  "pen-line": ["M12 20h9", "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"],
-  "disc": ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"],
-  "battery": ["M16 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z", "M22 11v2"],
-  "wind": ["M12.8 19.6A2 2 0 1 0 14 16H2", "M17.5 8a2.5 2.5 0 1 1 2 4H2", "M9.8 4.4A2 2 0 1 1 11 8H2"],
-  "cog": ["M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M12 2v2", "M12 20v2", "m4.9 4.9 1.4 1.4", "m17.7 17.7 1.4 1.4", "M2 12h2", "M20 12h2", "m4.9 19.1 1.4-1.4", "m17.7 6.3 1.4-1.4"],
-  "sparkles": ["m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z", "M5 3v4", "M3 5h4"],
-  "folder-plus": ["M12 10v6", "M9 13h6", "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"],
-  "layers": ["m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z", "m22 12.5-9.17 4.16a2 2 0 0 1-1.66 0L2 12.5", "m22 17.5-9.17 4.16a2 2 0 0 1-1.66 0L2 17.5"],
-  "trending-up": ["M16 7h6v6", "m22 7-8.5 8.5-5-5L2 17"],
-};
-
-function LucideIcon({ iconName, size = 18, className = "", strokeWidth = 2, ...rest }) {
-  const paths = ICON_PATHS[iconName];
-  if (!paths) return null;
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...rest}>
-      {paths.map((d, i) => <path key={i} d={d} />)}
-    </svg>
-  );
-}
-
-const makeIcon = (name) => {
-  const C = (props) => <LucideIcon iconName={name} {...props} />;
-  C.displayName = name;
-  return C;
-};
-
-// Safety net: React crashes hard (error #130) if any element type is not a
-// function/string. Rather than blanking the whole app over one bad icon, swap
-// the offending type for a harmless placeholder and record its name.
-window.__badTypes = [];
-(function () {
-  const origCreate = React.createElement;
-  React.createElement = function (type, props) {
-    const t = typeof type;
-    if (type == null || (t !== "function" && t !== "string" && t !== "symbol" && t !== "object")) {
-      window.__badTypes.push(String(type));
-      return origCreate("span", null);
-    }
-    if (t === "object" && !type.$$typeof) {
-      window.__badTypes.push(JSON.stringify(type).slice(0, 80));
-      return origCreate("span", null);
-    }
-    return origCreate.apply(React, arguments);
-  };
-})();
-const Plus = makeIcon("plus");
-const X = makeIcon("x");
-const Car = makeIcon("car");
-const Bike = makeIcon("bike");
-const Gauge = makeIcon("gauge");
-const CalendarClock = makeIcon("calendar-clock");
-const Wrench = makeIcon("wrench");
-const ChevronLeft = makeIcon("chevron-left");
-const AlertTriangle = makeIcon("alert-triangle");
-const CheckCircle2 = makeIcon("check-circle-2");
-const Trash2 = makeIcon("trash-2");
-const Settings2 = makeIcon("settings-2");
-const History = makeIcon("history");
-const Droplet = makeIcon("droplet");
-const Save = makeIcon("save");
-const PenLine = makeIcon("pen-line");
-const Disc = makeIcon("disc");
-const Battery = makeIcon("battery");
-const Wind = makeIcon("wind");
-const Cog = makeIcon("cog");
-const Sparkles = makeIcon("sparkles");
-const ChevronUp = makeIcon("chevron-up");
-const ChevronDown = makeIcon("chevron-down");
-const FolderPlus = makeIcon("folder-plus");
-const Layers = makeIcon("layers");
-const TrendingUp = makeIcon("trending-up");
-const Fuel = makeIcon("fuel");
-
-
-const FONT_STYLE = `
-.font-display { font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-weight: 800; letter-spacing: 0.03em; }
-.font-body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
-.font-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace; }
-`;
-
-const ICON_MAP = { cog: Cog, disc: Disc, wind: Wind, battery: Battery, sparkles: Sparkles, wrench: Wrench, droplet: Droplet, fuel: Fuel, gauge: Gauge, layers: Layers };
-const ICON_KEYS = Object.keys(ICON_MAP);
-const COLOR_KEYS = ["amber", "rose", "sky", "emerald", "violet", "orange", "teal", "fuchsia"];
-
-const DEFAULT_CATEGORIES = [
-  {
-    key: "engine",
-    label: "Κινητήρας",
-    icon: "cog",
-    color: "amber",
-    items: ["Αλλαγή λαδιών κινητήρα", "Φίλτρο λαδιού", "Φίλτρο αέρα", "Φίλτρο καυσίμου", "Μπουζί", "Ιμάντας χρονισμού / καδένα", "Ψυκτικό υγρό"],
-  },
-  {
-    key: "brakes",
-    label: "Φρένα",
-    icon: "disc",
-    color: "rose",
-    items: ["Τακάκια φρένων εμπρός", "Τακάκια φρένων πίσω", "Δίσκοι φρένων", "Υγρό φρένων"],
-  },
-  {
-    key: "chassis",
-    label: "Ανάρτηση & Ελαστικά",
-    icon: "wind",
-    color: "sky",
-    items: ["Ελαστικά", "Αμορτισέρ", "Αλυσίδα & γρανάζια (μηχανή)"],
-  },
-  {
-    key: "electrical",
-    label: "Ηλεκτρικά & Καμπίνα",
-    icon: "battery",
-    color: "emerald",
-    items: ["Μπαταρία", "Φίλτρο καμπίνας (γύρης)"],
-  },
-  {
-    key: "other",
-    label: "Λοιπά",
-    icon: "sparkles",
-    color: "violet",
-    items: ["ΚΤΕΟ", "Γενικό service"],
-  },
-];
-const CATEGORY_STYLES = {
-  amber: { chip: "bg-amber-400/15 text-amber-300 ring-amber-400/40", tab: "bg-amber-400/15 text-amber-300 ring-amber-400/40", dot: "bg-amber-400" },
-  rose: { chip: "bg-rose-400/15 text-rose-300 ring-rose-400/40", tab: "bg-rose-400/15 text-rose-300 ring-rose-400/40", dot: "bg-rose-400" },
-  sky: { chip: "bg-sky-400/15 text-sky-300 ring-sky-400/40", tab: "bg-sky-400/15 text-sky-300 ring-sky-400/40", dot: "bg-sky-400" },
-  emerald: { chip: "bg-emerald-400/15 text-emerald-300 ring-emerald-400/40", tab: "bg-emerald-400/15 text-emerald-300 ring-emerald-400/40", dot: "bg-emerald-400" },
-  violet: { chip: "bg-violet-400/15 text-violet-300 ring-violet-400/40", tab: "bg-violet-400/15 text-violet-300 ring-violet-400/40", dot: "bg-violet-400" },
-  orange: { chip: "bg-orange-400/15 text-orange-300 ring-orange-400/40", tab: "bg-orange-400/15 text-orange-300 ring-orange-400/40", dot: "bg-orange-400" },
-  teal: { chip: "bg-teal-400/15 text-teal-300 ring-teal-400/40", tab: "bg-teal-400/15 text-teal-300 ring-teal-400/40", dot: "bg-teal-400" },
-  fuchsia: { chip: "bg-fuchsia-400/15 text-fuchsia-300 ring-fuchsia-400/40", tab: "bg-fuchsia-400/15 text-fuchsia-300 ring-fuchsia-400/40", dot: "bg-fuchsia-400" },
-};
-
-const CAR_BRANDS = [
-  "Toyota", "Volkswagen", "Opel", "Peugeot", "Renault", "Citroën", "Fiat", "Ford",
-  "Hyundai", "Kia", "Nissan", "Honda", "Mazda", "Suzuki", "Škoda", "Seat",
-  "BMW", "Mercedes-Benz", "Audi", "Volvo", "Mitsubishi", "Chevrolet", "Dacia",
-  "Mini", "Smart", "Alfa Romeo", "Jeep", "Land Rover", "Lexus", "Subaru",
-  "Chrysler", "Jaguar", "Porsche", "Tesla", "SsangYong", "Lancia", "Daihatsu",
-];
-const MOTO_BRANDS = [
-  "Yamaha", "Honda", "Suzuki", "Kawasaki", "Piaggio", "Vespa", "KTM",
-  "BMW Motorrad", "Aprilia", "Triumph", "Ducati", "Harley-Davidson",
-  "SYM", "Kymco", "Peugeot Motocycles", "Benelli", "Royal Enfield",
-  "Husqvarna", "Vespa", "Derbi", "MV Agusta", "Malaguti",
-];
-
-function BrandAutocomplete({ value, onChange, brands, placeholder }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = React.useRef(null);
-
-  useEffect(() => {
-    const onClick = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
-
-  const matches = value.trim()
-    ? brands.filter((b) => b.toLowerCase().includes(value.trim().toLowerCase()))
-    : brands;
-
-  return (
-    <div ref={wrapRef} className="relative">
-      <input
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
-        placeholder={placeholder}
-        name="brand-field"
-        {...noAutofill}
-        onFocus={(e) => { setOpen(true); keepVisible(e); }}
-        className="w-full font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50"
-      />
-      {open && matches.length > 0 && (
-        <div className="absolute z-20 mt-1.5 w-full max-h-48 overflow-y-auto rounded-lg bg-black ring-1 ring-white/15 shadow-xl shadow-black/40 py-1">
-          {matches.map((b) => (
-            <button
-              key={b}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); onChange(b); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-sm font-body text-zinc-200 hover:bg-amber-400/15 hover:text-amber-300"
-            >
-              {b}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Keeps the focused field visible above the on-screen keyboard on mobile,
-// and stops the browser from painting its own light-colored autofill
-// suggestion styling over our inputs (which is what makes them look blank).
-const keepVisible = (e) => {
-  const el = e.target;
-  setTimeout(() => { el.scrollIntoView({ block: "center", behavior: "smooth" }); }, 250);
-};
-const noAutofill = { autoComplete: "off", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, onFocus: keepVisible };
-
-const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-const todayISO = () => new Date().toISOString().slice(0, 10);
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("el-GR", { day: "2-digit", month: "short", year: "numeric" });
-};
-const fmtKm = (n) => (n || n === 0 ? Number(n).toLocaleString("el-GR") + " χλμ" : "—");
-const daysBetween = (fromISO, toISO) => {
-  const a = new Date(fromISO + "T00:00:00");
-  const b = new Date(toISO + "T00:00:00");
-  return Math.round((b - a) / 86400000);
-};
-
-const DEFAULTS = {
-  car: { oilIntervalKm: 10000, oilIntervalMonths: 12 },
-  moto: { oilIntervalKm: 3000, oilIntervalMonths: 6 },
-};
-
-function kteoStatus(vehicle) {
-  if (!vehicle.kteoExpiry) return { level: "unknown", label: "Δεν έχει οριστεί", days: null };
-  const days = daysBetween(todayISO(), vehicle.kteoExpiry);
-  if (days < 0) return { level: "danger", label: `Έληξε πριν ${Math.abs(days)} ημέρες`, days };
-  if (days <= 30) return { level: "warn", label: `Λήγει σε ${days} ημέρες`, days };
-  return { level: "ok", label: `Ισχύει ακόμη ${days} ημέρες`, days };
-}
-
-function avgKmPerYear(vehicle) {
-  if (!vehicle.purchaseDate) return null;
-  const days = daysBetween(vehicle.purchaseDate, todayISO());
-  const years = Math.max(days / 365, 30 / 365); // avoid absurd rates in the first month
-  const kmAtPurchase = Number(vehicle.kmAtPurchase) || 0;
-  const currentKm = Number(vehicle.currentKm) || 0;
-  const kmDriven = currentKm - kmAtPurchase;
-  if (kmDriven <= 0 || days <= 0) return null;
-  return kmDriven / years;
-}
-
-function oilStatus(vehicle) {
-  const avgKm = avgKmPerYear(vehicle);
-  if (!vehicle.lastOilDate || vehicle.lastOilKm == null) {
-    return { level: "unknown", label: "Δεν υπάρχει καταγραφή αλλαγής λαδιών", remKm: null, remDays: null, avgKm };
-  }
-  const lastOilKm = Number(vehicle.lastOilKm) || 0;
-  const currentKm = Number(vehicle.currentKm) || 0;
-  const intervalKm = Number(vehicle.oilIntervalKm) || 10000;
-  const intervalMonths = Number(vehicle.oilIntervalMonths) || 12;
-  const nextKm = lastOilKm + intervalKm;
-  const nextDateDays = intervalMonths * 30;
-  const nextDate = new Date(new Date(vehicle.lastOilDate + "T00:00:00").getTime() + nextDateDays * 86400000)
-    .toISOString().slice(0, 10);
-  const remKm = nextKm - currentKm;
-  const remDays = daysBetween(todayISO(), nextDate);
-
-  // Estimated calendar date the km-based interval will be reached, based on
-  // the vehicle's actual average yearly usage (from purchase date/odometer).
-  let estMonths = null, estDate = null;
-  if (avgKm && remKm > 0) {
-    estMonths = Math.round((remKm / avgKm) * 12);
-    estDate = new Date(Date.now() + (remKm / avgKm) * 365 * 86400000).toISOString().slice(0, 10);
+  if(alerts.length){
+    h += '<div class="alert"><span class="warn">'+icon("alert",17)+'</span><div>'+
+      '<div style="font-size:14px;font-weight:600;color:#fcd34d">'+alerts.length+
+      (alerts.length===1?" όχημα χρειάζεται":" οχήματα χρειάζονται")+' προσοχή</div>'+
+      '<div style="font-size:12px;color:rgba(251,191,36,.75);margin-top:2px">'+
+      'ΚΤΕΟ ή αλλαγή λαδιών πλησιάζει ή έχει λήξει.</div></div></div>';
   }
 
-  let level = "ok";
-  if (remKm <= 0 || remDays <= 0) level = "danger";
-  else if (remKm <= 1000 || remDays <= 30) level = "warn";
-  return { level, remKm, remDays, nextKm, nextDate, avgKm, estMonths, estDate };
+  if(!S.vehicles.length){
+    h += '<div class="card empty">'+
+      '<div style="font-size:26px;margin-bottom:8px" class="warn">'+icon("car",26)+'</div>'+
+      '<div style="color:#d4d4d8;font-weight:600;font-size:14px;margin-bottom:3px">'+
+      'Δεν έχεις προσθέσει όχημα ακόμη</div>'+
+      '<div style="font-size:12.5px">Πρόσθεσε αυτοκίνητο ή μηχανή για να ξεκινήσεις το ιστορικό του.</div></div>';
+  }
+
+  sorted.forEach(function(v){
+    var k=kteoStatus(v), o=oilStatus(v);
+    h += '<button class="card rec" data-act="open" data-id="'+v.id+'">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">'+
+        '<span class="ic" style="background:rgba(251,191,36,.12);color:var(--acc)">'+
+          icon(v.type==="moto"?"bike":"car",17)+'</span>'+
+        '<span style="flex:1;min-width:0">'+
+          '<span style="display:block;font-weight:800;font-size:14px;text-transform:uppercase;'+
+          'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(v.brand+" "+(v.model||""))+'</span>'+
+          '<span class="mono" style="font-size:11.5px;color:var(--dim);letter-spacing:.12em">'+esc(v.plate)+'</span>'+
+        '</span>'+
+        '<span class="mono" style="font-size:13.5px;font-weight:600">'+fmtKm(v.currentKm)+'</span>'+
+      '</div>'+
+      '<div style="display:flex;gap:7px;flex-wrap:wrap">'+
+        statusPill(k.level,"ΚΤΕΟ "+(k.days==null?"—":k.days<0?"ληγμένο":k.days+"η"))+
+        statusPill(o.level,"Λάδια "+(o.remKm==null?"—":o.remKm<0?"τώρα":fmtKm(o.remKm)))+
+      '</div></button>';
+  });
+
+  h += '<button class="btn btn-p" style="width:100%;margin:6px 0 30px" data-act="newVehicle">'+
+    icon("plus",17)+' Προσθήκη οχήματος</button></div>';
+  return h;
 }
 
-const LEVEL_STYLES = {
-  ok: { text: "text-emerald-400", bg: "bg-emerald-400/10", ring: "ring-emerald-400/30", dot: "bg-emerald-400" },
-  warn: { text: "text-amber-400", bg: "bg-amber-400/10", ring: "ring-amber-400/30", dot: "bg-amber-400" },
-  danger: { text: "text-rose-400", bg: "bg-rose-400/10", ring: "ring-rose-400/30", dot: "bg-rose-400" },
-  unknown: { text: "text-zinc-400", bg: "bg-zinc-400/10", ring: "ring-zinc-400/30", dot: "bg-zinc-500" },
-};
+/* ---------------- Screen: vehicle detail ---------------- */
+function viewDetail(v){
+  var k=kteoStatus(v), o=oilStatus(v);
+  var kPct = k.days==null?0:(k.days/365)*100;
+  var oPct = o.remKm==null?0:(o.remKm/(num(v.oilIntervalKm)||10000))*100;
+  var list = recsOf(v.id).slice().sort(function(a,b){ return a.date<b.date?1:-1; });
 
-function StatusPill({ level, children, icon: Icon }) {
-  const s = LEVEL_STYLES[level] || LEVEL_STYLES.unknown;
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-body font-medium ${s.bg} ${s.text} ring-1 ${s.ring}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-      {Icon ? <Icon size={12} /> : null}
-      {children}
-    </span>
-  );
+  var h = '<div class="wrap"><div class="hdr">'+
+    '<button data-act="back" style="color:var(--dim);margin-left:-4px">'+icon("back",22)+'</button>'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+        '<span class="warn">'+icon(v.type==="moto"?"bike":"car",15)+'</span>'+
+        '<h1 style="font-size:16px;text-transform:uppercase;white-space:nowrap;'+
+        'overflow:hidden;text-overflow:ellipsis">'+esc(v.brand+" "+(v.model||""))+'</h1>'+
+      '</div>'+
+      '<div class="mono" style="font-size:12px;color:var(--dim);letter-spacing:.14em">'+
+        esc(v.plate)+(v.year?" · "+v.year:"")+'</div>'+
+    '</div>'+
+    '<button data-act="editVehicle" style="color:var(--dim);padding:6px">'+icon("settings",18)+'</button>'+
+  '</div>';
+
+  /* Two tappable gauges */
+  h += '<div class="grid2" style="margin-bottom:12px">'+
+    '<button class="card gauge" data-act="quickKteo">'+
+      gauge(k.level, k.days==null?"—":k.days<0?"ΕΛΗΞΕ":k.days+"η","ΚΤΕΟ",kPct)+
+      '<div style="font-size:12px;color:var(--dim);margin-top:9px">'+esc(k.label)+'</div>'+
+      (v.kteoExpiry?'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">'+fmtDate(v.kteoExpiry)+'</div>':'')+
+      '<div class="warn" style="font-size:11.5px;font-weight:600;margin-top:8px">'+icon("pen",11)+' Ενημέρωση</div>'+
+    '</button>'+
+    '<button class="card gauge" data-act="quickOil">'+
+      gauge(o.level, o.remKm==null?"—":o.remKm<0?"ΤΩΡΑ":(Math.round(o.remKm/100)/10)+"χ","Λάδια",oPct)+
+      '<div style="font-size:12px;color:var(--dim);margin-top:9px">'+
+        (o.remKm==null?"Καταχώρησε αλλαγή λαδιών":o.remKm<0?"Χρειάζεται αλλαγή":fmtKm(o.remKm)+" απόσταση")+'</div>'+
+      (o.nextDate?'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">έως '+fmtDate(o.nextDate)+'</div>':'')+
+      (o.estMonths?'<div style="font-size:11.5px;color:var(--sky);margin-top:5px">'+icon("trend",11)+
+        ' ~'+o.estMonths+(o.estMonths===1?" μήνα":" μήνες")+' με τη χρήση σου</div>':'')+
+      '<div class="warn" style="font-size:11.5px;font-weight:600;margin-top:8px">'+icon("pen",11)+' Ενημέρωση</div>'+
+    '</button>'+
+  '</div>';
+
+  /* Odometer */
+  h += '<button class="card" data-act="editVehicle" style="width:100%;display:flex;'+
+    'align-items:center;justify-content:space-between;padding:15px;margin-bottom:16px">'+
+    '<span style="display:flex;align-items:center;gap:10px">'+
+      '<span style="color:var(--dim)">'+icon("gauge",17)+'</span>'+
+      '<span style="text-align:left"><span style="display:block;font-size:12px;color:var(--dim)">Οδόμετρο</span>'+
+      '<span class="mono" style="font-size:18px;font-weight:700">'+fmtKm(v.currentKm)+'</span></span>'+
+    '</span>'+
+    '<span class="warn" style="font-size:12px;font-weight:600">'+icon("pen",13)+' Ενημέρωση</span>'+
+  '</button>';
+
+  /* History */
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+    '<h2 style="font-size:13.5px;color:#d4d4d8;text-transform:uppercase;display:flex;align-items:center;gap:6px">'+
+      '<span style="color:var(--dim)">'+icon("history",15)+'</span> Ιστορικό</h2>'+
+    '<button class="btn btn-p" style="padding:8px 14px;font-size:12.5px" data-act="newService">'+
+      icon("plus",14)+' Service</button></div>';
+
+  if(!list.length){
+    h += '<div class="card empty" style="margin-bottom:30px">'+
+      '<div style="margin-bottom:7px">'+icon("wrench",22)+'</div>'+
+      '<div style="font-size:13.5px">Δεν υπάρχει καταγεγραμμένο service ακόμη.</div></div>';
+  }
+  list.forEach(function(r){
+    h += '<button class="card rec" data-act="editService" data-id="'+r.id+'">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'+
+        '<span><span class="mono" style="display:block;font-size:13.5px;font-weight:600">'+fmtDate(r.date)+'</span>'+
+        '<span class="mono" style="font-size:12px;color:var(--dim)">'+fmtKm(r.km)+'</span></span>'+
+        '<span style="display:flex;align-items:center;gap:9px">'+
+          (r.cost!=null?'<span class="mono warn" style="font-size:12.5px">'+num(r.cost).toLocaleString("el-GR")+'€</span>':'')+
+        '</span>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        r.items.map(function(i){ return '<span class="tag">'+esc(i)+'</span>'; }).join("")+
+      '</div>'+
+      (r.notes?'<div style="font-size:12px;color:var(--dim);margin-top:7px">'+esc(r.notes)+'</div>':'')+
+    '</button>';
+  });
+
+  h += '<div style="height:24px"></div></div>';
+  return h;
+}
+/* ---------------- Modals ---------------- */
+function sheet(title,iconName,body,footer){
+  return '<div class="modal" data-act="backdrop"><div class="sheet" data-stop="1">'+
+    '<div style="display:flex;align-items:center;gap:7px;margin-bottom:16px">'+
+      (iconName?'<span class="warn">'+icon(iconName,17)+'</span>':'')+
+      '<h2 style="font-size:17px;text-transform:uppercase">'+esc(title)+'</h2>'+
+      '<button class="x" data-act="close">'+icon("x",20)+'</button>'+
+    '</div>'+body+
+    '<div style="display:flex;gap:8px;margin-top:4px">'+footer+'</div>'+
+  '</div></div>';
+}
+function field(label,inner,hint){
+  return '<div class="fld"><label class="lbl">'+esc(label)+'</label>'+inner+
+    (hint?'<div class="hint">'+esc(hint)+'</div>':'')+'</div>';
+}
+function txt(name,val,attrs){
+  return '<input name="'+name+'" value="'+esc(val==null?"":val)+'" autocomplete="off" '+
+    'autocorrect="off" autocapitalize="off" spellcheck="false" '+(attrs||"")+'>';
 }
 
-function GaugeArc({ pct, level, label, sublabel }) {
-  const s = LEVEL_STYLES[level] || LEVEL_STYLES.unknown;
-  const clamped = Math.max(0, Math.min(100, pct));
-  const circumference = 2 * Math.PI * 40;
-  const strokeColor = level === "ok" ? "#34d399" : level === "warn" ? "#fbbf24" : level === "danger" ? "#fb7185" : "#71717a";
-  return (
-    <div className="relative flex flex-col items-center justify-center">
-      <svg width="112" height="112" viewBox="0 0 100 100" className="-rotate-90">
-        <circle cx="50" cy="50" r="40" fill="none" stroke="#2B2C31" strokeWidth="9" />
-        <circle
-          cx="50" cy="50" r="40" fill="none" stroke={strokeColor} strokeWidth="9"
-          strokeDasharray={circumference} strokeDashoffset={circumference * (1 - clamped / 100)}
-          strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.6s ease" }}
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className={`font-mono font-bold text-lg ${s.text}`}>{label}</span>
-        <span className="font-body text-xs text-zinc-400 mt-0.5 text-center px-2">{sublabel}</span>
-      </div>
-    </div>
-  );
+/* ----- Vehicle form ----- */
+function modalVehicle(){
+  var d = S.draft;
+  var brands = d.type==="moto"?MOTO_BRANDS:CAR_BRANDS;
+  var q = (d.brand||"").trim().toLowerCase();
+  var matches = d.acOpen ? brands.filter(function(b){
+      return !q || b.toLowerCase().indexOf(q)>=0; }).slice(0,40) : [];
+
+  var body =
+    '<div class="row" style="margin-bottom:14px">'+
+      ['car','moto'].map(function(t){
+        var on = d.type===t;
+        return '<button class="chip'+(on?" on":"")+'" data-act="type" data-v="'+t+'" '+
+          'style="flex:1;justify-content:center;padding:11px">'+
+          icon(t==="moto"?"bike":"car",16)+' '+(t==="moto"?"Μηχανή":"Αυτοκίνητο")+'</button>';
+      }).join("")+
+    '</div>'+
+    field("Πινακίδα", txt("plate",d.plate,'class="mono" style="letter-spacing:.1em" placeholder="π.χ. ΑΒΗ-1234"'))+
+    '<div class="row">'+
+      '<div>'+field("Μάρκα",
+        '<div class="ac">'+txt("brand",d.brand,'placeholder="π.χ. Toyota" data-ac="1"')+
+        (matches.length?'<div class="aclist">'+matches.map(function(b){
+          return '<button class="acitem" data-act="pickBrand" data-v="'+esc(b)+'">'+esc(b)+'</button>';
+        }).join("")+'</div>':'')+'</div>')+'</div>'+
+      '<div>'+field("Μοντέλο", txt("model",d.model,'placeholder="π.χ. Yaris"'))+'</div>'+
+    '</div>'+
+    '<div class="row">'+
+      '<div>'+field("Έτος", txt("year",d.year,'class="mono" inputmode="numeric" maxlength="4"'))+'</div>'+
+      '<div>'+field("Τρέχοντα χιλιόμετρα", txt("currentKm",d.currentKm,'class="mono" inputmode="numeric"'))+'</div>'+
+    '</div>'+
+    '<div class="divider"></div>'+
+    field("Λήξη ΚΤΕΟ",
+      '<input type="date" name="kteoExpiry" value="'+esc(d.kteoExpiry||"")+'" class="mono">')+
+    '<div class="divider"></div>'+
+    '<label class="lbl">Διάστημα αλλαγής λαδιών</label>'+
+    '<div class="row" style="margin-bottom:5px">'+
+      '<div>'+txt("oilIntervalKm",d.oilIntervalKm,'class="mono" inputmode="numeric"')+
+        '<div class="hint">χιλιόμετρα</div></div>'+
+      '<div>'+txt("oilIntervalMonths",d.oilIntervalMonths,'class="mono" inputmode="numeric"')+
+        '<div class="hint">μήνες</div></div>'+
+    '</div>'+
+    '<div class="hint" style="margin-bottom:12px">Όποιο από τα δύο συμπληρωθεί πρώτο.</div>'+
+    '<div class="divider"></div>'+
+    '<label class="lbl">Μέση ετήσια χρήση (προαιρετικό)</label>'+
+    '<div class="row" style="margin-bottom:5px">'+
+      '<div><input type="date" name="purchaseDate" value="'+esc(d.purchaseDate||"")+'" class="mono">'+
+        '<div class="hint">ημερομηνία αγοράς</div></div>'+
+      '<div>'+txt("kmAtPurchase",d.kmAtPurchase,'class="mono" inputmode="numeric" placeholder="0"')+
+        '<div class="hint">χλμ κατά την αγορά</div></div>'+
+    '</div>';
+
+  var est = avgKmPerYear({purchaseDate:d.purchaseDate,kmAtPurchase:d.kmAtPurchase,currentKm:d.currentKm});
+  body += est
+    ? '<div class="hint warn" style="margin-bottom:6px">≈ '+Math.round(est).toLocaleString("el-GR")+
+      ' χλμ/έτος — θα εκτιμάται πότε πλησιάζει η επόμενη αλλαγή.</div>'
+    : '<div class="hint" style="margin-bottom:6px">Συμπλήρωσε ημερομηνία αγοράς για εκτίμηση της επόμενης αλλαγής λαδιών.</div>';
+
+  var ok = (d.plate||"").trim() && (d.brand||"").trim();
+  var footer =
+    (d.id?'<button class="btn btn-d" data-act="deleteVehicle">'+icon("trash",16)+'</button>':'')+
+    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
+    '<button class="btn btn-p" style="flex:1" data-act="saveVehicle"'+(ok?"":" disabled")+'>'+
+      icon("save",15)+' Αποθήκευση</button>';
+  return sheet(d.id?"Επεξεργασία οχήματος":"Νέο όχημα",null,body,footer);
 }
 
-function VehicleIcon({ type, size = 18, className = "" }) {
-  return type === "moto" ? <Bike size={size} className={className} /> : <Car size={size} className={className} />;
+/* ----- Service form ----- */
+function modalService(){
+  var d = S.draft;
+  var cat = null;
+  for(var i=0;i<S.cats.length;i++) if(S.cats[i].key===d.catKey) cat=S.cats[i];
+  if(!cat) cat = S.cats[0];
+  var known = [];
+  S.cats.forEach(function(c){ known = known.concat(c.items); });
+  var extras = (d.items||[]).filter(function(i){ return known.indexOf(i)<0; });
+
+  var body =
+    '<div class="row" style="margin-bottom:14px">'+
+      '<div><label class="lbl">Ημερομηνία</label>'+
+        '<input type="date" name="date" value="'+esc(d.date)+'" class="mono"></div>'+
+      '<div><label class="lbl">Χιλιόμετρα</label>'+
+        txt("km",d.km,'class="mono" inputmode="numeric"')+'</div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">'+
+      '<label class="lbl" style="margin:0">Τι έγινε</label>'+
+      '<button data-act="openCats" style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:4px">'+
+        icon("settings",13)+' Κατηγορίες</button>'+
+    '</div>'+
+    '<div class="tabs">'+
+      S.cats.map(function(c){
+        var n = c.items.filter(function(i){ return (d.items||[]).indexOf(i)>=0; }).length;
+        var on = c.key===cat.key;
+        return '<button class="tab'+(on?" on":"")+'" data-act="catTab" data-v="'+c.key+'"'+
+          (on?' style="border-color:'+COLORS[c.color]+'88;color:'+COLORS[c.color]+
+             ';background:'+COLORS[c.color]+'22"':'')+'>'+
+          icon(c.icon,14)+' '+esc(c.label)+(n?'<span class="cnt">'+n+'</span>':'')+'</button>';
+      }).join("")+
+    '</div>'+
+    '<div class="pool">'+
+      (cat.items.length
+        ? cat.items.map(function(it){
+            var on = (d.items||[]).indexOf(it)>=0;
+            return '<button class="chip'+(on?" on":"")+'" data-act="toggleItem" data-v="'+esc(it)+'"'+
+              (on?' style="background:'+COLORS[cat.color]+'26;color:'+COLORS[cat.color]+
+                 ';border-color:'+COLORS[cat.color]+'77"':'')+'>'+esc(it)+'</button>';
+          }).join("")
+        : '<div class="hint">Άδεια κατηγορία — πρόσθεσε στοιχεία από τις «Κατηγορίες».</div>')+
+    '</div>';
+
+  if(extras.length){
+    body += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">'+
+      extras.map(function(it){
+        return '<button class="chip on" data-act="toggleItem" data-v="'+esc(it)+'">'+
+          esc(it)+' '+icon("x",11)+'</button>';
+      }).join("")+'</div>';
+  }
+
+  body +=
+    '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+      txt("customItem",d.customItem,'placeholder="Κάτι άλλο..." style="flex:1"')+
+      '<button class="btn btn-s" style="flex:0 0 auto;padding:11px 14px" data-act="addCustom">'+icon("plus",16)+'</button>'+
+    '</div>'+
+    field("Κόστος (€)", txt("cost",d.cost,'class="mono" inputmode="decimal"'))+
+    field("Σημειώσεις",
+      '<textarea name="notes" rows="2" placeholder="π.χ. συνεργείο, παρατηρήσεις...">'+esc(d.notes||"")+'</textarea>');
+
+  var ok = (d.items||[]).length && d.km!=="" && d.km!=null;
+  var footer =
+    (d.id?'<button class="btn btn-d" data-act="deleteService">'+icon("trash",16)+'</button>':'')+
+    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
+    '<button class="btn btn-p" style="flex:1" data-act="saveService"'+(ok?"":" disabled")+'>'+
+      icon("save",15)+' '+(d.id?"Αποθήκευση":"Καταχώρηση")+'</button>';
+  return sheet(d.id?"Επεξεργασία service":"Νέα καταχώρηση service",null,body,footer);
 }
 
-// ---------- Add / Edit Vehicle Modal ----------
-function VehicleForm({ initial, onSave, onCancel, onDelete }) {
-  const [type, setType] = useState(initial?.type || "car");
-  const [plate, setPlate] = useState(initial?.plate || "");
-  const [brand, setBrand] = useState(initial?.brand || "");
-  const [model, setModel] = useState(initial?.model || "");
-  const [year, setYear] = useState(initial?.year || "");
-  const [currentKm, setCurrentKm] = useState(initial?.currentKm ?? "");
-  const [kteoExpiry, setKteoExpiry] = useState(initial?.kteoExpiry || "");
-  const [oilIntervalKm, setOilIntervalKm] = useState(initial?.oilIntervalKm ?? DEFAULTS[type].oilIntervalKm);
-  const [oilIntervalMonths, setOilIntervalMonths] = useState(initial?.oilIntervalMonths ?? DEFAULTS[type].oilIntervalMonths);
-  const [purchaseDate, setPurchaseDate] = useState(initial?.purchaseDate || "");
-  const [kmAtPurchase, setKmAtPurchase] = useState(initial?.kmAtPurchase ?? "");
+/* ----- Quick edits ----- */
+function modalKteo(){
+  var d = S.draft;
+  var body = field("Ημερομηνία λήξης",
+    '<input type="date" name="kteoExpiry" value="'+esc(d.kteoExpiry||"")+'" class="mono">');
+  return sheet("Λήξη ΚΤΕΟ","calendar",body,
+    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
+    '<button class="btn btn-p" style="flex:1" data-act="saveKteo">'+icon("save",15)+' Αποθήκευση</button>');
+}
+function modalOil(){
+  var d = S.draft;
+  var body =
+    '<div class="row" style="margin-bottom:12px">'+
+      '<div><label class="lbl">Τελευταία αλλαγή</label>'+
+        '<input type="date" name="lastOilDate" value="'+esc(d.lastOilDate||"")+'" class="mono"></div>'+
+      '<div><label class="lbl">Χλμ τότε</label>'+
+        txt("lastOilKm",d.lastOilKm,'class="mono" inputmode="numeric"')+'</div>'+
+    '</div>'+
+    '<label class="lbl">Διάστημα αλλαγής</label>'+
+    '<div class="row">'+
+      '<div>'+txt("oilIntervalKm",d.oilIntervalKm,'class="mono" inputmode="numeric"')+
+        '<div class="hint">χιλιόμετρα</div></div>'+
+      '<div>'+txt("oilIntervalMonths",d.oilIntervalMonths,'class="mono" inputmode="numeric"')+
+        '<div class="hint">μήνες</div></div>'+
+    '</div><div style="height:10px"></div>';
+  return sheet("Λάδια","droplet",body,
+    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
+    '<button class="btn btn-p" style="flex:1" data-act="saveOil">'+icon("save",15)+' Αποθήκευση</button>');
+}
 
-  useEffect(() => {
-    if (!initial) {
-      setOilIntervalKm(DEFAULTS[type].oilIntervalKm);
-      setOilIntervalMonths(DEFAULTS[type].oilIntervalMonths);
+/* ----- Category manager ----- */
+function modalCats(){
+  var d = S.draft;
+  var body = '<div class="hint" style="margin:-8px 0 14px">'+
+    'Πρόσθεσε, αφαίρεσε, μετονόμασε ή άλλαξε σειρά σε κατηγορίες και στα στοιχεία τους.</div>';
+
+  S.cats.forEach(function(c,idx){
+    var open = d.expanded===c.key;
+    var col = COLORS[c.color]||COLORS.amber;
+    body += '<div class="mgr"><div class="mgr-h">'+
+      '<span class="ic" style="background:'+col+'22;color:'+col+'">'+icon(c.icon,14)+'</span>'+
+      (d.renCat===c.key
+        ? txt("renCatVal",d.renCatVal,'style="flex:1;padding:7px 9px;font-size:14px"')
+        : '<button data-act="expandCat" data-v="'+c.key+'" style="flex:1;text-align:left;'+
+          'font-size:14px;font-weight:600;min-width:0">'+esc(c.label)+
+          ' <span style="color:var(--dim2);font-weight:400">· '+c.items.length+'</span></button>')+
+      (d.renCat===c.key
+        ? '<button class="iconbtn ok" data-act="renCatSave" data-v="'+c.key+'">'+icon("check",15)+'</button>'
+        : '<button class="iconbtn" data-act="renCat" data-v="'+c.key+'">'+icon("pen",13)+'</button>')+
+      '<button class="iconbtn" data-act="moveCat" data-v="'+c.key+'" data-dir="-1"'+(idx===0?" disabled":"")+'>'+icon("up",15)+'</button>'+
+      '<button class="iconbtn" data-act="moveCat" data-v="'+c.key+'" data-dir="1"'+(idx===S.cats.length-1?" disabled":"")+'>'+icon("down",15)+'</button>'+
+      '<button class="iconbtn" data-act="delCat" data-v="'+c.key+'">'+icon("trash",13)+'</button>'+
+    '</div>';
+
+    if(open){
+      body += '<div class="mgr-b">';
+      c.items.forEach(function(it,i){
+        var ren = d.renItem===c.key+"::"+it;
+        body += '<div class="sub">'+
+          (ren
+            ? txt("renItemVal",d.renItemVal,'style="flex:1;padding:5px 8px;font-size:12.5px"')
+            : '<span style="flex:1;font-size:12.5px;min-width:0;overflow:hidden;'+
+              'text-overflow:ellipsis;white-space:nowrap">'+esc(it)+'</span>')+
+          (ren
+            ? '<button class="iconbtn ok" data-act="renItemSave" data-v="'+c.key+'" data-i="'+esc(it)+'">'+icon("check",14)+'</button>'
+            : '<button class="iconbtn" data-act="renItem" data-v="'+c.key+'" data-i="'+esc(it)+'">'+icon("pen",12)+'</button>')+
+          '<button class="iconbtn" data-act="moveItem" data-v="'+c.key+'" data-i="'+esc(it)+'" data-dir="-1"'+(i===0?" disabled":"")+'>'+icon("up",13)+'</button>'+
+          '<button class="iconbtn" data-act="moveItem" data-v="'+c.key+'" data-i="'+esc(it)+'" data-dir="1"'+(i===c.items.length-1?" disabled":"")+'>'+icon("down",13)+'</button>'+
+          '<button class="iconbtn" data-act="delItem" data-v="'+c.key+'" data-i="'+esc(it)+'">'+icon("x",13)+'</button>'+
+        '</div>';
+      });
+      body += '<div style="display:flex;gap:6px;margin-top:9px">'+
+        txt("newItem_"+c.key,d["newItem_"+c.key],'placeholder="Νέο στοιχείο..." style="flex:1;padding:8px 10px;font-size:12.5px"')+
+        '<button class="btn btn-s" style="flex:0 0 auto;padding:8px 11px" data-act="addItem" data-v="'+c.key+'">'+icon("plus",14)+'</button>'+
+      '</div></div>';
     }
-  }, [type]);
+    body += '</div>';
+  });
 
-  const canSave = plate.trim() && brand.trim();
+  if(d.addingCat){
+    body += '<div class="mgr" style="padding:12px">'+
+      txt("newCatLabel",d.newCatLabel,'placeholder="Όνομα κατηγορίας" style="margin-bottom:11px"')+
+      '<div class="lbl">Χρώμα</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">'+
+        COLOR_KEYS.map(function(k){
+          return '<button class="swatch'+(d.newCatColor===k?" on":"")+'" data-act="pickColor" data-v="'+k+'" '+
+            'style="background:'+COLORS[k]+'"></button>';
+        }).join("")+'</div>'+
+      '<div class="lbl">Εικονίδιο</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px">'+
+        ICON_KEYS.map(function(k){
+          var on = d.newCatIcon===k;
+          return '<button class="ic" data-act="pickIcon" data-v="'+k+'" style="border:1px solid '+
+            (on?"rgba(251,191,36,.5)":"var(--line)")+';background:'+(on?"rgba(251,191,36,.16)":"rgba(255,255,255,.05)")+
+            ';color:'+(on?"#fcd34d":"var(--dim)")+'">'+icon(k,15)+'</button>';
+        }).join("")+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="btn btn-s" style="flex:1;padding:9px;font-size:12.5px" data-act="cancelAddCat">Άκυρο</button>'+
+        '<button class="btn btn-p" style="flex:1;padding:9px;font-size:12.5px" data-act="addCat"'+
+          ((d.newCatLabel||"").trim()?"":" disabled")+'>Προσθήκη</button>'+
+      '</div></div>';
+  } else {
+    body += '<button class="btn btn-s" style="width:100%;margin-bottom:4px" data-act="startAddCat">'+
+      icon("folder",15)+' Νέα κατηγορία</button>';
+  }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-full sm:max-w-md overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide">
-            {initial ? "Επεξεργασία οχήματος" : "Νέο όχημα"}
-          </h2>
-          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          {[{ k: "car", l: "Αυτοκίνητο", i: Car }, { k: "moto", l: "Μηχανή", i: Bike }].map(({ k, l, i: Icon }) => (
-            <button
-              key={k}
-              onClick={() => setType(k)}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 font-body text-sm font-medium ring-1 transition ${
-                type === k ? "bg-amber-400/15 text-amber-300 ring-amber-400/40" : "bg-zinc-800 text-zinc-400 ring-white/10"
-              }`}
-            >
-              <Icon size={16} /> {l}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="font-body text-xs text-zinc-400 mb-1 block">Πινακίδα</label>
-            <input value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())}
-              placeholder="π.χ. ΑΒΗ-1234" name="plate-field" {...noAutofill}
-              className="w-full font-mono tracking-wider rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="font-body text-xs text-zinc-400 mb-1 block">Μάρκα</label>
-              <BrandAutocomplete value={brand} onChange={setBrand} brands={type === "moto" ? MOTO_BRANDS : CAR_BRANDS} placeholder="π.χ. Toyota" />
-            </div>
-            <div className="flex-1">
-              <label className="font-body text-xs text-zinc-400 mb-1 block">Μοντέλο</label>
-              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="π.χ. Yaris"
-                name="model-field" {...noAutofill}
-                className="w-full font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="font-body text-xs text-zinc-400 mb-1 block">Έτος</label>
-              <input value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, ""))} inputMode="numeric" maxLength={4}
-                name="year-field" {...noAutofill}
-                className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-            </div>
-            <div className="flex-1">
-              <label className="font-body text-xs text-zinc-400 mb-1 block">Τρέχοντα χιλιόμετρα</label>
-              <input value={currentKm} onChange={(e) => setCurrentKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-                name="current-km-field" {...noAutofill}
-                className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-white/5">
-            <label className="font-body text-xs text-zinc-400 mb-1 block flex items-center gap-1.5"><CalendarClock size={13} /> Λήξη ΚΤΕΟ</label>
-            <input type="date" value={kteoExpiry} onChange={(e) => setKteoExpiry(e.target.value)}
-              name="kteo-date-field" autoComplete="off" onFocus={keepVisible}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
-          </div>
-
-          <div className="pt-2 border-t border-white/5">
-            <label className="font-body text-xs text-zinc-400 mb-1 block flex items-center gap-1.5"><Droplet size={13} /> Διάστημα αλλαγής λαδιών</label>
-            <div className="flex gap-3">
-              <div className="flex-1 relative">
-                <input value={oilIntervalKm} onChange={(e) => setOilIntervalKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-                  name="oil-km-field" {...noAutofill}
-                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">χλμ</span>
-              </div>
-              <div className="flex-1 relative">
-                <input value={oilIntervalMonths} onChange={(e) => setOilIntervalMonths(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-                  name="oil-months-interval-field" {...noAutofill}
-                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">μήνες</span>
-              </div>
-            </div>
-            <p className="font-body text-xs text-zinc-400 mt-1">Όποιο από τα δύο συμπληρωθεί πρώτο.</p>
-          </div>
-
-          <div className="pt-2 border-t border-white/5">
-            <label className="font-body text-xs text-zinc-400 mb-1 block flex items-center gap-1.5"><TrendingUp size={13} /> Μέση ετήσια χρήση (προαιρετικό)</label>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)}
-                  name="purchase-date-field" autoComplete="off" onFocus={keepVisible}
-                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
-                <p className="font-body text-xs text-zinc-500 mt-1">Ημερομηνία αγοράς</p>
-              </div>
-              <div className="flex-1">
-                <input value={kmAtPurchase} onChange={(e) => setKmAtPurchase(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-                  placeholder="0" name="km-at-purchase-field" {...noAutofill}
-                  className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
-                <p className="font-body text-xs text-zinc-500 mt-1">Χλμ κατά την αγορά</p>
-              </div>
-            </div>
-            {(() => {
-              const est = avgKmPerYear({ purchaseDate, kmAtPurchase, currentKm });
-              return est ? (
-                <p className="font-body text-xs text-amber-400/80 mt-2">
-                  ≈ {Math.round(est).toLocaleString("el-GR")} χλμ/έτος — θα εκτιμάται πότε πλησιάζει η επόμενη αλλαγή.
-                </p>
-              ) : (
-                <p className="font-body text-xs text-zinc-500 mt-2">Συμπλήρωσε ημερομηνία αγοράς για εκτίμηση πότε θα χρειαστείς την επόμενη αλλαγή λαδιών.</p>
-              );
-            })()}
-          </div>
-        </div>
-
-        <div className="flex gap-2 mt-5">
-          {initial && (
-            <button onClick={() => onDelete(initial.id)}
-              className="rounded-xl px-3.5 py-2.5 bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/30 font-body text-sm font-medium">
-              <Trash2 size={16} />
-            </button>
-          )}
-          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">
-            Άκυρο
-          </button>
-          <button
-            disabled={!canSave}
-            onClick={() => onSave({
-              id: initial?.id || uid(), type, plate: plate.trim(), brand: brand.trim(), model: model.trim(),
-              year: year ? Number(year) : null, currentKm: currentKm ? Number(currentKm) : 0,
-              kteoExpiry: kteoExpiry || null,
-              oilIntervalKm: oilIntervalKm ? Number(oilIntervalKm) : DEFAULTS[type].oilIntervalKm,
-              oilIntervalMonths: oilIntervalMonths ? Number(oilIntervalMonths) : DEFAULTS[type].oilIntervalMonths,
-              purchaseDate: purchaseDate || null,
-              kmAtPurchase: kmAtPurchase ? Number(kmAtPurchase) : 0,
-              lastOilKm: initial?.lastOilKm ?? null, lastOilDate: initial?.lastOilDate ?? null,
-            })}
-            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-1.5"
-          >
-            <Save size={15} /> Αποθήκευση
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return sheet("Κατηγορίες service","layers",body,
+    '<button class="btn btn-p" style="flex:1" data-act="closeCats">Έτοιμο</button>');
 }
+/* ---------------- Render ---------------- */
+var APP = document.getElementById("app");
 
-// ---------- Add Service Record Modal ----------
-function ServiceForm({ vehicle, initial, categories, onCategoriesChange, onSave, onCancel, onDelete }) {
-  const [date, setDate] = useState(initial?.date || todayISO());
-  const [km, setKm] = useState(initial?.km ?? vehicle.currentKm ?? "");
-  const [items, setItems] = useState(initial?.items || []);
-  const [cost, setCost] = useState(initial?.cost != null ? String(initial.cost) : "");
-  const [notes, setNotes] = useState(initial?.notes || "");
-  const [customItem, setCustomItem] = useState("");
-  const [activeCategory, setActiveCategory] = useState(categories[0]?.key);
-  const [showManager, setShowManager] = useState(false);
+function render(){
+  var html = S.selected ? viewDetail(vehicleById(S.selected)) : viewList();
+  if(S.modal==="vehicle")      html += modalVehicle();
+  else if(S.modal==="service") html += modalService();
+  else if(S.modal==="kteo")    html += modalKteo();
+  else if(S.modal==="oil")     html += modalOil();
+  else if(S.modal==="cats")    html += modalCats();
+  if(S.toast) html += '<div class="toast">'+esc(S.toast)+'</div>';
 
-  useEffect(() => {
-    if (!categories.some((c) => c.key === activeCategory)) setActiveCategory(categories[0]?.key);
-  }, [categories]);
+  APP.innerHTML = html;
 
-  const toggleItem = (item) => setItems((prev) => prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]);
-  const currentCategory = categories.find((c) => c.key === activeCategory) || categories[0];
-  const allKnownItems = categories.flatMap((c) => c.items);
-  const customItems = items.filter((i) => !allKnownItems.includes(i));
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-full sm:max-w-md overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide">
-            {initial ? "Επεξεργασία service" : "Νέα καταχώρηση service"}
-          </h2>
-          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
-        </div>
-
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1">
-            <label className="font-body text-xs text-zinc-400 mb-1 block">Ημερομηνία</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-              name="service-date-field" autoComplete="off" onFocus={keepVisible}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
-          </div>
-          <div className="flex-1">
-            <label className="font-body text-xs text-zinc-400 mb-1 block">Χιλιόμετρα</label>
-            <input value={km} onChange={(e) => setKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-              name="service-km-field" {...noAutofill}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-2">
-          <label className="font-body text-xs text-zinc-400 block">Τι έγινε — επίλεξε κατηγορία και μετά τα σχετικά</label>
-          <button onClick={() => setShowManager(true)}
-            className="flex items-center gap-1 text-xs font-body font-medium text-zinc-400 hover:text-amber-300">
-            <Settings2 size={13} /> Κατηγορίες
-          </button>
-        </div>
-
-        <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
-          {categories.map((cat) => {
-            const s = CATEGORY_STYLES[cat.color] || CATEGORY_STYLES.amber;
-            const Icon = ICON_MAP[cat.icon] || Cog;
-            const countSelected = cat.items.filter((i) => items.includes(i)).length;
-            return (
-              <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
-                className={`shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body font-semibold ring-1 transition ${
-                  activeCategory === cat.key ? s.tab : "bg-white/5 text-zinc-400 ring-white/10"
-                }`}>
-                <Icon size={14} className={activeCategory === cat.key ? "" : "text-zinc-500"} />
-                {cat.label}
-                {countSelected > 0 && (
-                  <span className="rounded-full bg-black/30 px-1.5 py-0.5 text-xs font-mono leading-none">{countSelected}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {currentCategory && (
-          <div className="rounded-2xl bg-black/40 ring-1 ring-white/10 p-3 mb-3">
-            {currentCategory.items.length === 0 ? (
-              <p className="font-body text-xs text-zinc-500 py-1">Άδεια κατηγορία — πρόσθεσε στοιχεία από τις "Κατηγορίες" πάνω.</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {currentCategory.items.map((item) => {
-                  const s = CATEGORY_STYLES[currentCategory.color] || CATEGORY_STYLES.amber;
-                  const selected = items.includes(item);
-                  return (
-                    <button key={item} onClick={() => toggleItem(item)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-body font-medium ring-1 transition ${
-                        selected ? s.chip : "bg-white/5 text-zinc-200 ring-white/15 hover:bg-white/10"
-                      }`}>
-                      {item}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {customItems.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {customItems.map((item) => (
-              <button key={item} onClick={() => toggleItem(item)}
-                className="rounded-full px-3 py-1.5 text-xs font-body font-medium ring-1 bg-amber-400/15 text-amber-300 ring-amber-400/40">
-                {item} <X size={11} className="inline ml-1 -mr-0.5" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="flex gap-2 mb-4">
-          <input value={customItem} onChange={(e) => setCustomItem(e.target.value)} placeholder="Κάτι άλλο..."
-            name="custom-item-field" {...noAutofill}
-            className="flex-1 font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2 text-sm text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
-          <button onClick={() => { if (customItem.trim()) { setItems((p) => [...p, customItem.trim()]); setCustomItem(""); } }}
-            className="rounded-lg px-3 bg-zinc-800 text-zinc-200 ring-1 ring-white/15"><Plus size={16} /></button>
-        </div>
-
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1">
-            <label className="font-body text-xs text-zinc-400 mb-1 block">Κόστος (€)</label>
-            <input value={cost} onChange={(e) => setCost(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal"
-              name="service-cost-field" {...noAutofill}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-          </div>
-        </div>
-        <div className="mb-5">
-          <label className="font-body text-xs text-zinc-400 mb-1 block">Σημειώσεις</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-            placeholder="π.χ. συνεργείο, παρατηρήσεις..."
-            name="service-notes-field" {...noAutofill}
-            className="w-full font-body rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50 resize-none" />
-        </div>
-
-        <div className="flex gap-2">
-          {initial && onDelete && (
-            <button onClick={() => onDelete(initial.id)}
-              className="rounded-xl px-3.5 py-2.5 bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/30 font-body text-sm font-medium">
-              <Trash2 size={16} />
-            </button>
-          )}
-          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">
-            Άκυρο
-          </button>
-          <button
-            disabled={items.length === 0 || !km}
-            onClick={() => onSave({ id: initial?.id || uid(), date, km: Number(km), items, cost: cost ? Number(cost) : null, notes: notes.trim() })}
-            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-1.5"
-          >
-            <Save size={15} /> {initial ? "Αποθήκευση" : "Καταχώρηση"}
-          </button>
-        </div>
-      </div>
-
-      {showManager && (
-        <CategoryManager categories={categories} onChange={onCategoriesChange} onClose={() => setShowManager(false)} />
-      )}
-    </div>
-  );
-}
-
-// ---------- Category / Sub-category Manager ----------
-function CategoryManager({ categories, onChange, onClose }) {
-  const [expanded, setExpanded] = useState(null);
-  const [newLabel, setNewLabel] = useState("");
-  const [newColor, setNewColor] = useState(COLOR_KEYS[0]);
-  const [newIcon, setNewIcon] = useState(ICON_KEYS[0]);
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [newItemText, setNewItemText] = useState({});
-  const [renamingKey, setRenamingKey] = useState(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [renamingItem, setRenamingItem] = useState(null); // `${catKey}::${item}`
-  const [renameItemValue, setRenameItemValue] = useState("");
-
-  const moveCategory = (idx, dir) => {
-    const next = [...categories];
-    const j = idx + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[idx], next[j]] = [next[j], next[idx]];
-    onChange(next);
-  };
-
-  const moveItem = (catKey, idx, dir) => {
-    const next = categories.map((c) => {
-      if (c.key !== catKey) return c;
-      const items = [...c.items];
-      const j = idx + dir;
-      if (j < 0 || j >= items.length) return c;
-      [items[idx], items[j]] = [items[j], items[idx]];
-      return { ...c, items };
-    });
-    onChange(next);
-  };
-
-  const removeCategory = (key) => onChange(categories.filter((c) => c.key !== key));
-
-  const removeItem = (catKey, item) => onChange(categories.map((c) =>
-    c.key === catKey ? { ...c, items: c.items.filter((i) => i !== item) } : c
-  ));
-
-  const addItem = (catKey) => {
-    const text = (newItemText[catKey] || "").trim();
-    if (!text) return;
-    onChange(categories.map((c) =>
-      c.key === catKey && !c.items.includes(text) ? { ...c, items: [...c.items, text] } : c
-    ));
-    setNewItemText((p) => ({ ...p, [catKey]: "" }));
-  };
-
-  const renameCategory = (key) => {
-    const label = renameValue.trim();
-    if (label) onChange(categories.map((c) => (c.key === key ? { ...c, label } : c)));
-    setRenamingKey(null);
-  };
-
-  const renameItem = (catKey, oldItem) => {
-    const label = renameItemValue.trim();
-    if (label) {
-      onChange(categories.map((c) =>
-        c.key === catKey ? { ...c, items: c.items.map((i) => (i === oldItem ? label : i)) } : c
-      ));
+  // Restore focus + caret after a re-render, so typing is never interrupted.
+  if(S.focus){
+    var el = APP.querySelector('[name="'+S.focus+'"]');
+    if(el){
+      el.focus();
+      try{ el.setSelectionRange(el.value.length, el.value.length); }catch(e){}
     }
-    setRenamingItem(null);
-  };
-
-  const addCategory = () => {
-    const label = newLabel.trim();
-    if (!label) return;
-    onChange([...categories, { key: uid(), label, icon: newIcon, color: newColor, items: [] }]);
-    setNewLabel(""); setNewColor(COLOR_KEYS[0]); setNewIcon(ICON_KEYS[0]); setShowAddCategory(false);
-  };
-
-  return (
-    <div className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" style={{ zIndex: 60 }}>
-      <div className="w-full sm:max-w-md overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide flex items-center gap-1.5">
-            <Layers size={17} className="text-amber-400" /> Κατηγορίες service
-          </h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
-        </div>
-        <p className="font-body text-xs text-zinc-500 mb-4">Πρόσθεσε, αφαίρεσε ή αλλάξε σειρά σε κατηγορίες και στοιχεία τους.</p>
-
-        <div className="space-y-2 mb-4">
-          {categories.map((cat, idx) => {
-            const s = CATEGORY_STYLES[cat.color] || CATEGORY_STYLES.amber;
-            const Icon = ICON_MAP[cat.icon] || Cog;
-            const isOpen = expanded === cat.key;
-            return (
-              <div key={cat.key} className="rounded-xl bg-black/40 ring-1 ring-white/10 overflow-hidden">
-                <div className="flex items-center gap-2 p-2.5">
-                  <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${s.chip}`}>
-                    <Icon size={14} />
-                  </span>
-                  {renamingKey === cat.key ? (
-                    <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && renameCategory(cat.key)}
-                      autoFocus name={`rename-${cat.key}`} {...noAutofill}
-                      className="flex-1 font-body text-sm rounded-lg bg-black ring-1 ring-amber-400/50 px-2 py-1 text-zinc-50 outline-none" />
-                  ) : (
-                    <button onClick={() => setExpanded(isOpen ? null : cat.key)} className="flex-1 text-left font-body text-sm font-medium text-zinc-200 truncate">
-                      {cat.label} <span className="text-zinc-500 font-normal">· {cat.items.length}</span>
-                    </button>
-                  )}
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    {renamingKey === cat.key ? (
-                      <button onClick={() => renameCategory(cat.key)} className="p-1.5 text-emerald-400"><CheckCircle2 size={15} /></button>
-                    ) : (
-                      <button onClick={() => { setRenamingKey(cat.key); setRenameValue(cat.label); }} className="p-1.5 text-zinc-400 hover:text-zinc-200"><PenLine size={13} /></button>
-                    )}
-                    <button onClick={() => moveCategory(idx, -1)} disabled={idx === 0} className="p-1.5 text-zinc-400 disabled:opacity-20 hover:text-zinc-200"><ChevronUp size={15} /></button>
-                    <button onClick={() => moveCategory(idx, 1)} disabled={idx === categories.length - 1} className="p-1.5 text-zinc-400 disabled:opacity-20 hover:text-zinc-200"><ChevronDown size={15} /></button>
-                    <button onClick={() => removeCategory(cat.key)} className="p-1.5 text-zinc-400 hover:text-rose-400"><Trash2 size={13} /></button>
-                  </div>
-                </div>
-
-                {isOpen && (
-                  <div className="px-2.5 pb-2.5 space-y-1.5 border-t border-white/5 pt-2.5">
-                    {cat.items.map((item, i) => {
-                      const itemKey = `${cat.key}::${item}`;
-                      const isRenaming = renamingItem === itemKey;
-                      return (
-                        <div key={item} className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2.5 py-1.5">
-                          {isRenaming ? (
-                            <input value={renameItemValue} onChange={(e) => setRenameItemValue(e.target.value)}
-                              onKeyDown={(e) => e.key === "Enter" && renameItem(cat.key, item)}
-                              autoFocus name={`rename-item-${itemKey}`} {...noAutofill}
-                              className="flex-1 font-body text-xs rounded-lg bg-black ring-1 ring-amber-400/50 px-2 py-1 text-zinc-50 outline-none" />
-                          ) : (
-                            <span className="flex-1 font-body text-xs text-zinc-200 truncate">{item}</span>
-                          )}
-                          {isRenaming ? (
-                            <button onClick={() => renameItem(cat.key, item)} className="p-1 text-emerald-400"><CheckCircle2 size={14} /></button>
-                          ) : (
-                            <button onClick={() => { setRenamingItem(itemKey); setRenameItemValue(item); }} className="p-1 text-zinc-500 hover:text-zinc-200"><PenLine size={12} /></button>
-                          )}
-                          <button onClick={() => moveItem(cat.key, i, -1)} disabled={i === 0} className="p-1 text-zinc-500 disabled:opacity-20 hover:text-zinc-200"><ChevronUp size={13} /></button>
-                          <button onClick={() => moveItem(cat.key, i, 1)} disabled={i === cat.items.length - 1} className="p-1 text-zinc-500 disabled:opacity-20 hover:text-zinc-200"><ChevronDown size={13} /></button>
-                          <button onClick={() => removeItem(cat.key, item)} className="p-1 text-zinc-500 hover:text-rose-400"><X size={13} /></button>
-                        </div>
-                      );
-                    })}
-                    <div className="flex gap-1.5 pt-1">
-                      <input value={newItemText[cat.key] || ""} onChange={(e) => setNewItemText((p) => ({ ...p, [cat.key]: e.target.value }))}
-                        onKeyDown={(e) => e.key === "Enter" && addItem(cat.key)}
-                        placeholder="Νέο στοιχείο..." name={`new-item-${cat.key}`} {...noAutofill}
-                        className="flex-1 font-body text-xs rounded-lg bg-black ring-1 ring-white/15 px-2.5 py-1.5 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
-                      <button onClick={() => addItem(cat.key)} className="rounded-lg px-2.5 bg-zinc-800 text-zinc-200 ring-1 ring-white/15"><Plus size={14} /></button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {showAddCategory ? (
-          <div className="rounded-xl bg-black/40 ring-1 ring-white/10 p-3 mb-3 space-y-2.5">
-            <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Όνομα κατηγορίας"
-              name="new-category-label" {...noAutofill} autoFocus
-              className="w-full font-body text-sm rounded-lg bg-black ring-1 ring-white/15 px-3 py-2 text-zinc-50 placeholder-zinc-500 outline-none focus:ring-amber-400/50" />
-            <div>
-              <p className="font-body text-xs text-zinc-500 mb-1.5">Χρώμα</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {COLOR_KEYS.map((c) => (
-                  <button key={c} onClick={() => setNewColor(c)}
-                    className={`h-7 w-7 rounded-full ${CATEGORY_STYLES[c].dot} ${newColor === c ? "ring-2 ring-offset-2 ring-offset-zinc-900 ring-white" : "opacity-50"}`} />
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="font-body text-xs text-zinc-500 mb-1.5">Εικονίδιο</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {ICON_KEYS.map((k) => {
-                  const I = ICON_MAP[k];
-                  return (
-                    <button key={k} onClick={() => setNewIcon(k)}
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center ring-1 ${newIcon === k ? "bg-amber-400/15 ring-amber-400/50 text-amber-300" : "bg-white/5 ring-white/10 text-zinc-400"}`}>
-                      <I size={15} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowAddCategory(false)} className="flex-1 rounded-lg py-2 bg-zinc-800 text-zinc-300 font-body text-xs font-medium ring-1 ring-white/10">Άκυρο</button>
-              <button onClick={addCategory} disabled={!newLabel.trim()}
-                className="flex-1 rounded-lg py-2 bg-amber-400 text-zinc-900 font-body text-xs font-semibold disabled:opacity-40">Προσθήκη</button>
-            </div>
-          </div>
-        ) : (
-          <button onClick={() => setShowAddCategory(true)}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 bg-white/5 text-zinc-300 ring-1 ring-white/10 font-body text-sm font-medium mb-3">
-            <FolderPlus size={15} /> Νέα κατηγορία
-          </button>
-        )}
-
-        <button onClick={onClose} className="w-full rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold">
-          Έτοιμο
-        </button>
-      </div>
-    </div>
-  );
+  }
 }
 
-function VehicleDetail({ vehicle, records, categories, onCategoriesChange, onBack, onEdit, onQuickUpdate, onAddRecord, onEditRecord, onDeleteRecord }) {
-  const [showForm, setShowForm] = useState(false);
-  const [editingRecord, setEditingRecord] = useState(null);
-  const [showKteoEdit, setShowKteoEdit] = useState(false);
-  const [showOilEdit, setShowOilEdit] = useState(false);
-  const kteo = kteoStatus(vehicle);
-  const oil = oilStatus(vehicle);
+/* Keep every keystroke in the draft; re-render only when the UI must change. */
+APP.addEventListener("input", function(e){
+  var el = e.target, name = el.getAttribute("name");
+  if(!name) return;
+  S.focus = name;
+  var v = el.value;
+  if(el.getAttribute("inputmode")==="numeric") v = v.replace(/\D/g,"");
+  if(el.getAttribute("inputmode")==="decimal") v = v.replace(/[^\d.]/g,"");
+  if(name==="plate") v = v.toUpperCase();
+  if(v!==el.value){ el.value = v; }
+  S.draft[name] = v;
 
-  const kteoPct = kteo.days == null ? 0 : Math.max(0, Math.min(100, (kteo.days / 365) * 100));
-  const oilPct = oil.remKm == null ? 0 : Math.max(0, Math.min(100, (oil.remKm / (vehicle.oilIntervalKm || 10000)) * 100));
+  // These change what is displayed, so they need a redraw.
+  if(name==="brand"){ S.draft.acOpen = true; render(); }
+  else if(name==="purchaseDate"||name==="kmAtPurchase"||name==="currentKm") render();
+});
 
-  const sorted = [...records].sort((a, b) => (a.date < b.date ? 1 : -1));
+APP.addEventListener("change", function(e){
+  var name = e.target.getAttribute("name");
+  if(name) S.draft[name] = e.target.value;
+});
 
-  return (
-    <div className="min-h-full font-body">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <button onClick={onBack} className="text-zinc-400 p-1 -ml-1"><ChevronLeft size={22} /></button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <VehicleIcon type={vehicle.type} size={15} className="text-amber-400 shrink-0" />
-            <h1 className="font-display text-base font-semibold text-zinc-50 truncate uppercase tracking-wide">
-              {vehicle.brand} {vehicle.model}
-            </h1>
-          </div>
-          <span className="font-mono text-xs text-zinc-400 tracking-widest">{vehicle.plate}{vehicle.year ? ` · ${vehicle.year}` : ""}</span>
-        </div>
-        <button onClick={() => onEdit(vehicle)} className="text-zinc-400 p-1.5"><Settings2 size={18} /></button>
-      </div>
+// Keep the focused field above the on-screen keyboard.
+APP.addEventListener("focusin", function(e){
+  if(!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  S.focus = e.target.getAttribute("name");
+  var el = e.target;
+  setTimeout(function(){
+    try{ el.scrollIntoView({block:"center",behavior:"smooth"}); }catch(err){}
+  }, 280);
+});
 
-      <div className="px-4 grid grid-cols-2 gap-3 mb-4">
-        <button onClick={() => setShowKteoEdit(true)}
-          className="bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-3 flex flex-col items-center active:opacity-80 transition">
-          <GaugeArc pct={kteoPct} level={kteo.level}
-            label={kteo.days == null ? "—" : kteo.days < 0 ? "ΕΛΗΞΕ" : `${kteo.days}η`}
-            sublabel="ΚΤΕΟ" />
-          <p className="font-body text-xs text-zinc-400 mt-2 text-center">{kteo.label}</p>
-          {vehicle.kteoExpiry && <p className="font-mono text-xs text-zinc-400 mt-0.5">{fmtDate(vehicle.kteoExpiry)}</p>}
-          <span className="text-amber-400/80 text-xs font-body font-medium flex items-center gap-1 mt-2">
-            <PenLine size={12} /> Ενημέρωση
-          </span>
-        </button>
-        <button onClick={() => setShowOilEdit(true)}
-          className="bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-3 flex flex-col items-center active:opacity-80 transition">
-          <GaugeArc pct={oilPct} level={oil.level}
-            label={oil.remKm == null ? "—" : oil.remKm < 0 ? "ΤΩΡΑ" : `${Math.round(oil.remKm / 100) / 10}χ`}
-            sublabel="Λάδια" />
-          <p className="font-body text-xs text-zinc-400 mt-2 text-center">
-            {oil.remKm == null ? "Καταχώρησε αλλαγή λαδιών" : oil.remKm < 0 ? "Χρειάζεται αλλαγή" : `${fmtKm(oil.remKm)} απόσταση`}
-          </p>
-          {oil.nextDate && <p className="font-mono text-xs text-zinc-400 mt-0.5">έως {fmtDate(oil.nextDate)}</p>}
-          {oil.estMonths != null && oil.estMonths > 0 && (
-            <p className="font-body text-xs text-sky-400/80 mt-1.5 text-center flex items-center gap-1">
-              <TrendingUp size={11} /> ~{oil.estMonths} {oil.estMonths === 1 ? "μήνα" : "μήνες"} με βάση τη χρήση σου
-            </p>
-          )}
-          <span className="text-amber-400/80 text-xs font-body font-medium flex items-center gap-1 mt-2">
-            <PenLine size={12} /> Ενημέρωση
-          </span>
-        </button>
-      </div>
+/* ---------------- Actions ---------------- */
+APP.addEventListener("click", function(e){
+  var btn = e.target.closest("[data-act]");
+  if(!btn) return;
+  var act = btn.getAttribute("data-act");
+  var v   = btn.getAttribute("data-v");
+  var id  = btn.getAttribute("data-id");
+  var it  = btn.getAttribute("data-i");
+  var dir = Number(btn.getAttribute("data-dir")||0);
 
-      <div className="px-4 mb-4">
-        <button onClick={() => onEdit(vehicle)}
-          className="w-full bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-4 flex items-center justify-between active:opacity-80 transition">
-          <div className="flex items-center gap-2.5">
-            <Gauge size={17} className="text-zinc-400" />
-            <div className="text-left">
-              <p className="font-body text-xs text-zinc-400">Οδόμετρο</p>
-              <p className="font-mono text-lg font-semibold text-zinc-50">{fmtKm(vehicle.currentKm)}</p>
-            </div>
-          </div>
-          <span className="text-amber-400/80 text-xs font-body font-medium flex items-center gap-1">
-            <PenLine size={13} /> Ενημέρωση
-          </span>
-        </button>
-      </div>
+  // Clicking inside the sheet must not close it.
+  if(act==="backdrop" && e.target.closest("[data-stop]")) return;
+  if(act==="backdrop"){ goBack(); return; }
 
-      <div className="px-4 flex items-center justify-between mb-2">
-        <h2 className="font-display text-sm font-semibold text-zinc-300 uppercase tracking-wide flex items-center gap-1.5">
-          <History size={15} className="text-zinc-400" /> Ιστορικό
-        </h2>
-        <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-1 rounded-full bg-amber-400 text-zinc-900 px-3 py-1.5 text-xs font-body font-semibold">
-          <Plus size={14} /> Service
-        </button>
-      </div>
+  var d = S.draft, veh = S.selected?vehicleById(S.selected):null;
 
-      <div className="px-4 pb-8 space-y-2.5">
-        {sorted.length === 0 && (
-          <div className="rounded-2xl ring-1 ring-white/10 bg-zinc-900 p-6 text-center">
-            <Wrench size={22} className="mx-auto text-zinc-400 mb-2" />
-            <p className="font-body text-sm text-zinc-400">Δεν υπάρχει καταγεγραμμένο service ακόμη.</p>
-          </div>
-        )}
-        {sorted.map((r) => (
-          <button key={r.id} onClick={() => setEditingRecord(r)}
-            className="w-full text-left rounded-2xl ring-1 ring-white/10 bg-zinc-900 p-4 active:opacity-80 transition">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="font-mono text-sm font-semibold text-zinc-200">{fmtDate(r.date)}</p>
-                <p className="font-mono text-xs text-zinc-400">{fmtKm(r.km)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {r.cost != null && <span className="font-mono text-xs text-amber-400/90">{r.cost.toLocaleString("el-GR")}€</span>}
-                <span onClick={(e) => { e.stopPropagation(); onDeleteRecord(r.id); }}
-                  className="text-zinc-400 hover:text-rose-400 p-1 -m-1"><Trash2 size={14} /></span>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1.5 mb-1.5">
-              {r.items.map((it, idx) => (
-                <span key={idx} className="rounded-full bg-white/5 px-2 py-0.5 text-xs font-body text-zinc-300">{it}</span>
-              ))}
-            </div>
-            {r.notes && <p className="font-body text-xs text-zinc-400 mt-1.5">{r.notes}</p>}
-          </button>
-        ))}
-      </div>
+  switch(act){
 
-      {showForm && (
-        <ServiceForm vehicle={vehicle} categories={categories} onCategoriesChange={onCategoriesChange} onCancel={() => setShowForm(false)}
-          onSave={(rec) => { onAddRecord(rec); setShowForm(false); }} />
-      )}
-      {editingRecord && (
-        <ServiceForm vehicle={vehicle} initial={editingRecord} categories={categories} onCategoriesChange={onCategoriesChange} onCancel={() => setEditingRecord(null)}
-          onSave={(rec) => { onEditRecord(rec); setEditingRecord(null); }}
-          onDelete={(id) => { onDeleteRecord(id); setEditingRecord(null); }} />
-      )}
-      {showKteoEdit && (
-        <KteoQuickEdit vehicle={vehicle} onCancel={() => setShowKteoEdit(false)}
-          onSave={(patch) => { onQuickUpdate(vehicle.id, patch); setShowKteoEdit(false); }} />
-      )}
-      {showOilEdit && (
-        <OilQuickEdit vehicle={vehicle} onCancel={() => setShowOilEdit(false)}
-          onSave={(patch) => { onQuickUpdate(vehicle.id, patch); setShowOilEdit(false); }} />
-      )}
-    </div>
-  );
-}
+  /* -- navigation -- */
+  case "open":  S.selected=id; pushLayer(); window.scrollTo(0,0); break;
+  case "back":  goBack(); return;
+  case "close": goBack(); return;
 
-// ---------- Quick edit: ΚΤΕΟ ----------
-function KteoQuickEdit({ vehicle, onSave, onCancel }) {
-  const [kteoExpiry, setKteoExpiry] = useState(vehicle.kteoExpiry || "");
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-full sm:max-w-sm overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide flex items-center gap-1.5">
-            <CalendarClock size={17} className="text-amber-400" /> Λήξη ΚΤΕΟ
-          </h2>
-          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
-        </div>
-        <label className="font-body text-xs text-zinc-400 mb-1 block">Ημερομηνία λήξης</label>
-        <input type="date" value={kteoExpiry} onChange={(e) => setKteoExpiry(e.target.value)}
-          name="kteo-quick-field" autoComplete="off" onFocus={keepVisible} autoFocus
-          className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark] mb-5" />
-        <div className="flex gap-2">
-          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">Άκυρο</button>
-          <button onClick={() => onSave({ kteoExpiry: kteoExpiry || null })}
-            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold flex items-center justify-center gap-1.5">
-            <Save size={15} /> Αποθήκευση
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------- Quick edit: Λάδια ----------
-function OilQuickEdit({ vehicle, onSave, onCancel }) {
-  const [lastOilDate, setLastOilDate] = useState(vehicle.lastOilDate || "");
-  const [lastOilKm, setLastOilKm] = useState(vehicle.lastOilKm ?? "");
-  const [oilIntervalKm, setOilIntervalKm] = useState(vehicle.oilIntervalKm ?? 10000);
-  const [oilIntervalMonths, setOilIntervalMonths] = useState(vehicle.oilIntervalMonths ?? 12);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-full sm:max-w-sm overflow-y-auto bg-zinc-900 rounded-t-2xl sm:rounded-2xl ring-1 ring-white/15 p-5" style={{ maxHeight: "90vh" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-semibold text-zinc-50 uppercase tracking-wide flex items-center gap-1.5">
-            <Droplet size={17} className="text-amber-400" /> Λάδια
-          </h2>
-          <button onClick={onCancel} className="text-zinc-400 hover:text-zinc-200 p-1"><X size={20} /></button>
-        </div>
-
-        <div className="flex gap-3 mb-3">
-          <div className="flex-1">
-            <label className="font-body text-xs text-zinc-400 mb-1 block">Τελευταία αλλαγή</label>
-            <input type="date" value={lastOilDate} onChange={(e) => setLastOilDate(e.target.value)}
-              name="oil-quick-date-field" autoComplete="off" onFocus={keepVisible}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50 [color-scheme:dark]" />
-          </div>
-          <div className="flex-1">
-            <label className="font-body text-xs text-zinc-400 mb-1 block">Χλμ τότε</label>
-            <input value={lastOilKm} onChange={(e) => setLastOilKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-              name="oil-quick-km-field" {...noAutofill}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-          </div>
-        </div>
-
-        <label className="font-body text-xs text-zinc-400 mb-1 block">Διάστημα αλλαγής</label>
-        <div className="flex gap-3 mb-5">
-          <div className="flex-1 relative">
-            <input value={oilIntervalKm} onChange={(e) => setOilIntervalKm(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-              name="oil-quick-interval-km-field" {...noAutofill}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">χλμ</span>
-          </div>
-          <div className="flex-1 relative">
-            <input value={oilIntervalMonths} onChange={(e) => setOilIntervalMonths(e.target.value.replace(/\D/g, ""))} inputMode="numeric"
-              name="oil-quick-interval-months-field" {...noAutofill}
-              className="w-full font-mono rounded-lg bg-black ring-1 ring-white/15 px-3 py-2.5 text-zinc-50 outline-none focus:ring-amber-400/50" />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 font-body">μήνες</span>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button onClick={onCancel} className="flex-1 rounded-xl py-2.5 bg-zinc-800 text-zinc-300 font-body text-sm font-medium ring-1 ring-white/10">Άκυρο</button>
-          <button
-            onClick={() => onSave({
-              lastOilDate: lastOilDate || null,
-              lastOilKm: lastOilKm !== "" ? Number(lastOilKm) : null,
-              oilIntervalKm: oilIntervalKm ? Number(oilIntervalKm) : 10000,
-              oilIntervalMonths: oilIntervalMonths ? Number(oilIntervalMonths) : 12,
-            })}
-            className="flex-1 rounded-xl py-2.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold flex items-center justify-center gap-1.5">
-            <Save size={15} /> Αποθήκευση
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------- Vehicle Card (list) ----------
-function VehicleCard({ vehicle, onOpen }) {
-  const kteo = kteoStatus(vehicle);
-  const oil = oilStatus(vehicle);
-  return (
-    <button onClick={() => onOpen(vehicle)}
-      className="w-full text-left bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-4 active:opacity-80 transition">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="h-9 w-9 rounded-xl bg-amber-400/10 flex items-center justify-center shrink-0">
-            <VehicleIcon type={vehicle.type} size={17} className="text-amber-400" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-display text-sm font-semibold text-zinc-50 uppercase tracking-wide truncate">{vehicle.brand} {vehicle.model}</p>
-            <p className="font-mono text-xs text-zinc-400 tracking-widest">{vehicle.plate}</p>
-          </div>
-        </div>
-        <div className="text-right shrink-0">
-          <p className="font-mono text-sm font-semibold text-zinc-200">{fmtKm(vehicle.currentKm)}</p>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <StatusPill level={kteo.level} icon={CalendarClock}>
-          ΚΤΕΟ {kteo.days == null ? "—" : kteo.days < 0 ? "ληγμένο" : `${kteo.days}η`}
-        </StatusPill>
-        <StatusPill level={oil.level} icon={Droplet}>
-          Λάδια {oil.remKm == null ? "—" : oil.remKm < 0 ? "τώρα" : `${fmtKm(oil.remKm)}`}
-        </StatusPill>
-      </div>
-    </button>
-  );
-}
-
-// ---------- Main App ----------
-function VehicleHistoryApp() {
-  const [vehicles, setVehicles] = useState([]);
-  const [records, setRecords] = useState({}); // { vehicleId: [records] }
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
-  const [loaded, setLoaded] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
-  const [showVehicleForm, setShowVehicleForm] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const v = await storage.get("vehicles");
-        const list = v ? JSON.parse(v.value) : [];
-        setVehicles(list);
-        const recEntries = await Promise.all(list.map(async (veh) => {
-          try {
-            const r = await storage.get(`service:${veh.id}`);
-            return [veh.id, r ? JSON.parse(r.value) : []];
-          } catch { return [veh.id, []]; }
-        }));
-        setRecords(Object.fromEntries(recEntries));
-      } catch (e) {
-        setVehicles([]);
-      }
-      try {
-        const c = await storage.get("service-categories");
-        if (c) setCategories(JSON.parse(c.value));
-      } catch (e) { /* keep defaults */ }
-      setLoaded(true);
-    })();
-  }, []);
-
-  const persistCategories = async (list) => {
-    setCategories(list);
-    try { await storage.set("service-categories", JSON.stringify(list)); }
-    catch { setError("Αποτυχία αποθήκευσης."); }
-  };
-
-  const persistVehicles = async (list) => {
-    setVehicles(list);
-    try {
-      await storage.set("vehicles", JSON.stringify(list));
-    } catch {
-      try { await storage.set("vehicles", JSON.stringify(list)); }
-      catch { setError("Αποτυχία αποθήκευσης."); }
-    }
-  };
-
-  const persistRecords = async (vehicleId, list) => {
-    setRecords((prev) => ({ ...prev, [vehicleId]: list }));
-    try {
-      await storage.set(`service:${vehicleId}`, JSON.stringify(list));
-    } catch {
-      try { await storage.set(`service:${vehicleId}`, JSON.stringify(list)); }
-      catch { setError("Αποτυχία αποθήκευσης."); }
-    }
-  };
-
-  const saveVehicle = (vehicle) => {
-    const exists = vehicles.some((v) => v.id === vehicle.id);
-    const next = exists ? vehicles.map((v) => (v.id === vehicle.id ? vehicle : v)) : [...vehicles, vehicle];
-    persistVehicles(next);
-    if (!exists) setRecords((prev) => ({ ...prev, [vehicle.id]: [] }));
-    setShowVehicleForm(false);
-    setEditingVehicle(null);
-  };
-
-  const deleteVehicle = (id) => {
-    persistVehicles(vehicles.filter((v) => v.id !== id));
-    setRecords((prev) => { const n = { ...prev }; delete n[id]; return n; });
-    setShowVehicleForm(false);
-    setEditingVehicle(null);
-    if (selectedId === id) setSelectedId(null);
-  };
-
-  const quickUpdateVehicle = (id, patch) => {
-    persistVehicles(vehicles.map((v) => (v.id === id ? { ...v, ...patch } : v)));
-  };
-
-  const recomputeOilFields = (veh, list) => {
-    const oilRecords = list.filter((r) => r.items.includes("Αλλαγή λαδιών κινητήρα"));
-    let lastOilKm = null, lastOilDate = null;
-    if (oilRecords.length) {
-      const latest = [...oilRecords].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-      lastOilKm = Number(latest.km) || 0;
-      lastOilDate = latest.date;
-    }
-    const maxKm = list.reduce((m, r) => Math.max(m, Number(r.km) || 0), Number(veh.currentKm) || 0);
-    return { ...veh, lastOilKm, lastOilDate, currentKm: maxKm };
-  };
-
-  const addRecord = async (vehicleId, rec) => {
-    const list = [...(records[vehicleId] || []), rec];
-    await persistRecords(vehicleId, list);
-    const veh = vehicles.find((v) => v.id === vehicleId);
-    if (veh) await persistVehicles(vehicles.map((v) => (v.id === vehicleId ? recomputeOilFields(veh, list) : v)));
-  };
-
-  const editRecord = async (vehicleId, rec) => {
-    const list = (records[vehicleId] || []).map((r) => (r.id === rec.id ? rec : r));
-    await persistRecords(vehicleId, list);
-    const veh = vehicles.find((v) => v.id === vehicleId);
-    if (veh) await persistVehicles(vehicles.map((v) => (v.id === vehicleId ? recomputeOilFields(veh, list) : v)));
-  };
-
-  const deleteRecord = async (vehicleId, recId) => {
-    const list = (records[vehicleId] || []).filter((r) => r.id !== recId);
-    await persistRecords(vehicleId, list);
-    const veh = vehicles.find((v) => v.id === vehicleId);
-    if (veh) await persistVehicles(vehicles.map((v) => (v.id === vehicleId ? recomputeOilFields(veh, list) : v)));
-  };
-
-  const selected = vehicles.find((v) => v.id === selectedId);
-
-  const sortedVehicles = useMemo(() => {
-    const rank = (v) => {
-      const k = kteoStatus(v), o = oilStatus(v);
-      const lv = (s) => (s === "danger" ? 0 : s === "warn" ? 1 : s === "unknown" ? 2 : 3);
-      return Math.min(lv(k.level), lv(o.level));
+  /* -- vehicle -- */
+  case "newVehicle":
+    S.modal="vehicle"; pushLayer();
+    S.draft={type:"car",plate:"",brand:"",model:"",year:"",currentKm:"",kteoExpiry:"",
+             oilIntervalKm:DEFAULTS.car.km,oilIntervalMonths:DEFAULTS.car.months,
+             purchaseDate:"",kmAtPurchase:""};
+    break;
+  case "editVehicle":
+    S.modal="vehicle"; pushLayer();
+    S.draft={id:veh.id,type:veh.type,plate:veh.plate,brand:veh.brand,model:veh.model||"",
+             year:veh.year||"",currentKm:veh.currentKm||"",kteoExpiry:veh.kteoExpiry||"",
+             oilIntervalKm:veh.oilIntervalKm,oilIntervalMonths:veh.oilIntervalMonths,
+             purchaseDate:veh.purchaseDate||"",kmAtPurchase:veh.kmAtPurchase||""};
+    break;
+  case "type":
+    d.type=v;
+    if(!d.id){ d.oilIntervalKm=DEFAULTS[v].km; d.oilIntervalMonths=DEFAULTS[v].months; }
+    d.acOpen=false;
+    break;
+  case "pickBrand": d.brand=v; d.acOpen=false; S.focus=null; break;
+  case "saveVehicle": {
+    var rec = {
+      id: d.id||uid(), type:d.type, plate:(d.plate||"").trim(), brand:(d.brand||"").trim(),
+      model:(d.model||"").trim(), year:d.year?num(d.year):null, currentKm:num(d.currentKm),
+      kteoExpiry:d.kteoExpiry||null,
+      oilIntervalKm:num(d.oilIntervalKm)||DEFAULTS[d.type].km,
+      oilIntervalMonths:num(d.oilIntervalMonths)||DEFAULTS[d.type].months,
+      purchaseDate:d.purchaseDate||null, kmAtPurchase:num(d.kmAtPurchase)
     };
-    return [...vehicles].sort((a, b) => rank(a) - rank(b));
-  }, [vehicles]);
-
-  const alerts = useMemo(() => vehicles.filter((v) => {
-    const k = kteoStatus(v), o = oilStatus(v);
-    return k.level === "danger" || k.level === "warn" || o.level === "danger" || o.level === "warn";
-  }), [vehicles]);
-
-  if (!loaded) {
-    return (
-      <div className="h-full min-h-screen flex items-center justify-center bg-zinc-950">
-        <style>{FONT_STYLE}</style>
-        <Gauge className="text-amber-400 animate-pulse" size={28} />
-      </div>
-    );
+    var old = d.id?vehicleById(d.id):null;
+    if(old){ rec.lastOilKm=old.lastOilKm; rec.lastOilDate=old.lastOilDate;
+             for(var i=0;i<S.vehicles.length;i++) if(S.vehicles[i].id===rec.id) S.vehicles[i]=rec; }
+    else { rec.lastOilKm=null; rec.lastOilDate=null; S.vehicles.push(rec); S.records[rec.id]=[]; saveRecords(); }
+    saveVehicles();
+    if(d.id) syncFromHistory(rec.id);
+    goBack(); return;
   }
+  case "deleteVehicle":
+    if(!confirm("Διαγραφή οχήματος και όλου του ιστορικού του;")) return;
+    S.vehicles = S.vehicles.filter(function(x){ return x.id!==d.id; });
+    delete S.records[d.id];
+    saveVehicles(); saveRecords();
+    if(S.selected===d.id){ S.selected=null; consumeLayer(); }
+    goBack(); return;
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <style>{FONT_STYLE}</style>
+  /* -- quick edits -- */
+  case "quickKteo": S.modal="kteo"; pushLayer(); S.draft={kteoExpiry:veh.kteoExpiry||""}; break;
+  case "saveKteo":
+    veh.kteoExpiry = d.kteoExpiry||null; saveVehicles(); goBack(); return;
+  case "quickOil":
+    S.modal="oil"; pushLayer();
+    S.draft={lastOilDate:veh.lastOilDate||"",lastOilKm:veh.lastOilKm==null?"":veh.lastOilKm,
+             oilIntervalKm:veh.oilIntervalKm,oilIntervalMonths:veh.oilIntervalMonths};
+    break;
+  case "saveOil":
+    veh.lastOilDate = d.lastOilDate||null;
+    veh.lastOilKm   = d.lastOilKm===""?null:num(d.lastOilKm);
+    veh.oilIntervalKm = num(d.oilIntervalKm)||10000;
+    veh.oilIntervalMonths = num(d.oilIntervalMonths)||12;
+    saveVehicles(); goBack(); return;
 
-      {selected ? (
-        <VehicleDetail
-          vehicle={selected}
-          records={records[selected.id] || []}
-          categories={categories}
-          onCategoriesChange={persistCategories}
-          onBack={() => setSelectedId(null)}
-          onEdit={(v) => setEditingVehicle(v)}
-          onQuickUpdate={quickUpdateVehicle}
-          onAddRecord={(rec) => addRecord(selected.id, rec)}
-          onEditRecord={(rec) => editRecord(selected.id, rec)}
-          onDeleteRecord={(id) => deleteRecord(selected.id, id)}
-        />
-      ) : (
-        <div className="pb-8">
-          <div className="px-4 pt-5 pb-4">
-            <p className="font-body text-xs text-amber-400/80 font-medium uppercase tracking-widest mb-0.5">Γκαράζ</p>
-            <h1 className="font-display text-2xl font-bold text-zinc-50 uppercase tracking-wide">Ιστορικό οχημάτων</h1>
-          </div>
-
-          {alerts.length > 0 && (
-            <div className="px-4 mb-4">
-              <div className="rounded-2xl bg-amber-400/10 ring-1 ring-amber-400/30 p-3.5 flex items-start gap-2.5">
-                <AlertTriangle size={17} className="text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-body text-sm font-medium text-amber-300">
-                    {alerts.length} {alerts.length === 1 ? "όχημα χρειάζεται προσοχή" : "οχήματα χρειάζονται προσοχή"}
-                  </p>
-                  <p className="font-body text-xs text-amber-400/70 mt-0.5">ΚΤΕΟ ή αλλαγή λαδιών πλησιάζει ή έχει λήξει.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="px-4 space-y-3">
-            {sortedVehicles.map((v) => <VehicleCard key={v.id} vehicle={v} onOpen={(veh) => setSelectedId(veh.id)} />)}
-          </div>
-
-          {vehicles.length === 0 && (
-            <div className="px-4">
-              <div className="rounded-2xl ring-1 ring-white/10 bg-zinc-900 p-8 text-center">
-                <div className="h-12 w-12 rounded-2xl bg-amber-400/10 flex items-center justify-center mx-auto mb-3">
-                  <Car size={22} className="text-amber-400" />
-                </div>
-                <p className="font-body text-sm text-zinc-300 font-medium mb-1">Δεν έχεις προσθέσει όχημα ακόμη</p>
-                <p className="font-body text-xs text-zinc-400">Πρόσθεσε αυτοκίνητο ή μηχανή για να ξεκινήσεις το ιστορικό του.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="px-4 mt-4">
-            <button onClick={() => setShowVehicleForm(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 bg-amber-400 text-zinc-900 font-body text-sm font-semibold">
-              <Plus size={17} /> Προσθήκη οχήματος
-            </button>
-          </div>
-        </div>
-      )}
-
-      {(showVehicleForm || editingVehicle) && (
-        <VehicleForm
-          initial={editingVehicle}
-          onCancel={() => { setShowVehicleForm(false); setEditingVehicle(null); }}
-          onSave={saveVehicle}
-          onDelete={deleteVehicle}
-        />
-      )}
-
-      {error && (
-        <div className="fixed bottom-4 left-4 right-4 bg-rose-500/90 text-white text-xs font-body rounded-xl px-4 py-2.5 text-center">
-          {error}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const root = document.getElementById("root");
-if (ReactDOM.createRoot) {
-  ReactDOM.createRoot(root).render(<VehicleHistoryApp />);
-} else {
-  ReactDOM.render(<VehicleHistoryApp />, root);
-}
-</script>
-
-<script>
-// Compile the app source with an explicit CLASSIC JSX runtime (no injected imports),
-// so it works regardless of which Babel version the CDN serves.
-(function () {
-  try {
-    var src = document.getElementById("app-src").textContent;
-    var out = Babel.transform(src, {
-      presets: [["react", { runtime: "classic" }]],
-      sourceType: "script",
-      filename: "app.jsx"
-    }).code;
-    var s = document.createElement("script");
-    s.textContent = out;
-    document.body.appendChild(s);
-  } catch (err) {
-    var b = document.getElementById("errbox");
-    if (b) { b.style.display = "block"; b.textContent = "ΣΦΑΛΜΑ ΜΕΤΑΓΛΩΤΤΙΣΗΣ:\n" + (err.message || err); }
+  /* -- service records -- */
+  case "newService":
+    S.modal="service"; pushLayer();
+    S.draft={date:todayISO(),km:veh.currentKm||"",items:[],cost:"",notes:"",
+             customItem:"",catKey:S.cats[0]?S.cats[0].key:null};
+    break;
+  case "editService": {
+    var r = recsOf(S.selected).filter(function(x){ return x.id===id; })[0];
+    if(!r) return;
+    S.modal="service"; pushLayer();
+    S.draft={id:r.id,date:r.date,km:r.km,items:r.items.slice(),
+             cost:r.cost==null?"":String(r.cost),notes:r.notes||"",
+             customItem:"",catKey:S.cats[0]?S.cats[0].key:null};
+    break;
   }
-})();
+  case "catTab": d.catKey=v; break;
+  case "toggleItem": {
+    var arr = d.items||[];
+    d.items = arr.indexOf(v)>=0 ? arr.filter(function(x){ return x!==v; }) : arr.concat([v]);
+    break;
+  }
+  case "addCustom": {
+    var t=(d.customItem||"").trim();
+    if(t && (d.items||[]).indexOf(t)<0) d.items=(d.items||[]).concat([t]);
+    d.customItem=""; S.focus=null;
+    break;
+  }
+  case "saveService": {
+    var list = recsOf(S.selected).slice();
+    var obj = {id:d.id||uid(),date:d.date,km:num(d.km),items:d.items.slice(),
+               cost:d.cost===""?null:num(d.cost),notes:(d.notes||"").trim()};
+    if(d.id) list = list.map(function(x){ return x.id===d.id?obj:x; });
+    else list.push(obj);
+    S.records[S.selected]=list; saveRecords(); syncFromHistory(S.selected);
+    goBack(); return;
+  }
+  case "deleteService":
+    if(!confirm("Διαγραφή αυτής της καταχώρησης;")) return;
+    S.records[S.selected] = recsOf(S.selected).filter(function(x){ return x.id!==d.id; });
+    saveRecords(); syncFromHistory(S.selected);
+    goBack(); return;
+
+  /* -- category manager -- */
+  case "openCats": S.prevDraft=S.draft; S.prevModal=S.modal; S.modal="cats"; S.draft={}; pushLayer(); break;
+  case "closeCats": goBack(); return;
+  case "expandCat": d.expanded = d.expanded===v?null:v; break;
+  case "moveCat": {
+    var i1=-1; S.cats.forEach(function(c,i){ if(c.key===v) i1=i; });
+    var j=i1+dir; if(j<0||j>=S.cats.length) return;
+    var tmp=S.cats[i1]; S.cats[i1]=S.cats[j]; S.cats[j]=tmp; saveCats();
+    break;
+  }
+  case "delCat":
+    if(!confirm("Διαγραφή κατηγορίας;")) return;
+    S.cats = S.cats.filter(function(c){ return c.key!==v; }); saveCats();
+    break;
+  case "renCat": {
+    var c0 = S.cats.filter(function(c){ return c.key===v; })[0];
+    d.renCat=v; d.renCatVal=c0?c0.label:""; S.focus="renCatVal";
+    break;
+  }
+  case "renCatSave": {
+    var nv=(d.renCatVal||"").trim();
+    if(nv) S.cats.forEach(function(c){ if(c.key===v) c.label=nv; });
+    d.renCat=null; saveCats(); S.focus=null;
+    break;
+  }
+  case "moveItem": {
+    S.cats.forEach(function(c){
+      if(c.key!==v) return;
+      var i1=c.items.indexOf(it), j=i1+dir;
+      if(i1<0||j<0||j>=c.items.length) return;
+      var t=c.items[i1]; c.items[i1]=c.items[j]; c.items[j]=t;
+    });
+    saveCats();
+    break;
+  }
+  case "delItem":
+    S.cats.forEach(function(c){
+      if(c.key===v) c.items=c.items.filter(function(x){ return x!==it; });
+    });
+    saveCats();
+    break;
+  case "renItem": d.renItem=v+"::"+it; d.renItemVal=it; S.focus="renItemVal"; break;
+  case "renItemSave": {
+    var nv2=(d.renItemVal||"").trim();
+    if(nv2){
+      S.cats.forEach(function(c){
+        if(c.key===v) c.items=c.items.map(function(x){ return x===it?nv2:x; });
+      });
+      // keep already-saved records consistent with the rename
+      Object.keys(S.records).forEach(function(k){
+        S.records[k].forEach(function(r){
+          r.items = r.items.map(function(x){ return x===it?nv2:x; });
+        });
+      });
+      saveRecords();
+    }
+    d.renItem=null; saveCats(); S.focus=null;
+    break;
+  }
+  case "addItem": {
+    var t2=(d["newItem_"+v]||"").trim();
+    if(t2) S.cats.forEach(function(c){
+      if(c.key===v && c.items.indexOf(t2)<0) c.items.push(t2);
+    });
+    d["newItem_"+v]=""; saveCats(); S.focus=null;
+    break;
+  }
+  case "startAddCat":
+    d.addingCat=true; d.newCatLabel=""; d.newCatColor=COLOR_KEYS[0]; d.newCatIcon=ICON_KEYS[0];
+    break;
+  case "cancelAddCat": d.addingCat=false; break;
+  case "pickColor": d.newCatColor=v; break;
+  case "pickIcon":  d.newCatIcon=v; break;
+  case "addCat": {
+    var lb=(d.newCatLabel||"").trim(); if(!lb) return;
+    S.cats.push({key:uid(),label:lb,icon:d.newCatIcon||"cog",
+                 color:d.newCatColor||"amber",items:[]});
+    d.addingCat=false; saveCats(); S.focus=null;
+    break;
+  }
+  }
+  render();
+});
+
+function closeModal(){ S.modal=null; S.draft={}; S.focus=null; render(); }
+
+/* ---------------- Browser back button ----------------
+   Each screen/dialog pushes an entry, so the phone's Back button peels off one
+   layer at a time instead of leaving the app. Only at the top-level garage list
+   does Back exit, which is the behaviour people expect. */
+var layers = 0;
+function pushLayer(){
+  layers++;
+  try{ history.pushState({app:layers}, ""); }catch(e){}
+}
+function consumeLayer(){ if(layers>0) layers--; }
+function goBack(){
+  if(layers>0) history.back();   // popstate below performs the actual change
+  else { closeModal(); S.selected=null; render(); }
+}
+window.addEventListener("popstate", function(){
+  consumeLayer();
+  if(S.modal==="cats"){ S.modal=S.prevModal; S.draft=S.prevDraft||{}; S.focus=null; render(); }
+  else if(S.modal){ closeModal(); }
+  else if(S.selected){ S.selected=null; window.scrollTo(0,0); render(); }
+  // At the list with no layers left, the browser handles Back normally.
+});
+
+// Close the brand suggestion list when tapping elsewhere.
+document.addEventListener("click", function(e){
+  if(S.modal==="vehicle" && S.draft.acOpen && !e.target.closest(".ac") && !e.target.closest("[data-act]")){
+    S.draft.acOpen=false; render();
+  }
+});
+
+render();
 </script>
 </body>
 </html>
