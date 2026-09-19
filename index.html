@@ -795,18 +795,35 @@ function modalSettings(){
         '<button class="langbtn'+(LANG==="en"?" on":"")+'" data-act="setLang" data-v="en">🇬🇧 English</button>'+
       '</div></div>'+
 
+    (FOLDER_OK ? '<div class="sec"><h3><span style="color:var(--sky)">'+icon("folder",15)+'</span> '+
+        L("Φάκελος αντιγράφων","Backup folder")+'</h3>'+
+      (folderName
+        ? '<p>'+L("Τα αντίγραφα αποθηκεύονται στο: ","Backups are saved to: ")+
+            '<b style="color:#e4e4e7">'+esc(folderName)+' / '+APP_SUBFOLDER+'</b></p>'
+        : '<p>'+L("Διάλεξε μία φορά έναν φάκελο — π.χ. μέσα στις Λήψεις φτιάξε νέο φάκελο «Backup». "+
+                  "Η εφαρμογή φτιάχνει μέσα του δικό της υποφάκελο «"+APP_SUBFOLDER+"» και κρατάει εκεί όλα τα αντίγραφα. "+
+                  "Τον ίδιο φάκελο μπορούν να χρησιμοποιούν και οι άλλες εφαρμογές σου.",
+                  "Pick a folder once — e.g. create a “Backup” folder inside Downloads. "+
+                  "The app makes its own “"+APP_SUBFOLDER+"” subfolder in it and keeps every backup there. "+
+                  "Your other apps can use the same folder.")+'</p>')+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="btn btn-s" style="flex:1" data-act="pickFolder">'+icon("folder",15)+' '+
+          (folderName?L("Αλλαγή φακέλου","Change folder"):L("Επιλογή φακέλου","Choose folder"))+'</button>'+
+        (folderName?'<button class="btn btn-d" data-act="forgetFolder">'+icon("x",16)+'</button>':'')+
+      '</div></div>' : '')+
+
     '<div class="sec"><h3><span style="color:var(--sky)">'+icon("save",15)+'</span> '+
         L("Αντίγραφο ασφαλείας","Backup")+'</h3>'+
-      '<p>'+L("Κατεβάζει ένα αρχείο με όλα τα οχήματα, το ιστορικό και τις κατηγορίες. "+
+      '<p>'+L("Φτιάχνει ένα αρχείο με όλα τα οχήματα, το ιστορικό και τις κατηγορίες. "+
               "Φύλαξέ το κάπου ασφαλές (π.χ. Google Drive ή email), γιατί τα δεδομένα ζουν μόνο σε αυτή τη συσκευή.",
-              "Downloads a file with all vehicles, history and categories. Keep it somewhere safe "+
+              "Creates a file with all vehicles, history and categories. Keep it somewhere safe "+
               "(e.g. Google Drive or email) — the data only lives on this device.")+'</p>'+
       '<p style="margin-top:-5px">'+L("Περιέχει: ","Contains: ")+nV+(nV===1?L(" όχημα, "," vehicle, "):L(" οχήματα, "," vehicles, "))+nR+
         (nR===1?L(" καταχώρηση service."," service entry."):L(" καταχωρήσεις service."," service entries."))+'<br>'+
         L("Τελευταίο αντίγραφο: ","Last backup: ")+
         (S.meta.lastBackup ? fmtDate(S.meta.lastBackup) : L("ποτέ","never"))+'</p>'+
       '<button class="btn btn-p" style="width:100%" data-act="doBackup">'+icon("save",15)+' '+
-        L("Λήψη αντιγράφου","Download backup")+'</button>'+
+        (FOLDER_OK && folderName ? L("Αποθήκευση αντιγράφου","Save backup") : L("Λήψη αντιγράφου","Download backup"))+'</button>'+
       (canShare ? '<button class="btn btn-s" style="width:100%;margin-top:8px" data-act="shareBackup">'+
         icon("folder",15)+' '+L("Αποστολή σε Drive / email…","Send to Drive / email…")+'</button>' : '')+
     '</div>'+
@@ -817,10 +834,143 @@ function modalSettings(){
       '<label class="btn btn-s filebtn" style="width:100%">'+icon("history",15)+' '+
         L("Επιλογή αρχείου αντιγράφου","Choose backup file")+
         '<input type="file" id="restoreFile" accept=".json,application/json"></label>'+
+      (FOLDER_OK && folderName
+        ? '<button class="btn btn-s" style="width:100%;margin-top:8px" data-act="listFolder">'+icon("folder",15)+' '+
+            L("Επαναφορά από τον φάκελο","Restore from the folder")+'</button>'+
+          (S.draft.files
+            ? (S.draft.files.length
+                ? '<div style="margin-top:9px">'+S.draft.files.map(function(nm, i){
+                    return '<button class="sub" data-act="restoreNamed" data-v="'+esc(nm)+'" '+
+                      'style="width:100%;text-align:left;font-size:12.5px">'+
+                      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="mono">'+
+                      esc(nm)+'</span>'+(i===0?'<span class="pill bg-ok ok" style="padding:2px 8px">'+
+                      L("νεότερο","newest")+'</span>':'')+'</button>';
+                  }).join("")+'</div>'
+                : '<div class="hint" style="margin-top:8px">'+L("Δεν βρέθηκαν αντίγραφα στον φάκελο.","No backups found in the folder.")+'</div>')
+            : '')
+        : '')+
     '</div>';
 
   return sheet(L("Ρυθμίσεις","Settings"),"gear",body,
     '<button class="btn btn-p" style="flex:1" data-act="close">'+L("Έτοιμο","Done")+'</button>');
+}
+
+/* ---------------- Shared backup folder ----------------
+   Chrome on Android (132+) and on computers lets a page write into a folder the
+   user picks once. The folder handle is kept in IndexedDB, which belongs to the
+   whole site (aglentzakis-dot.github.io), so every app hosted there can reuse the
+   same folder — each one writes into its own subfolder. Anywhere this isn't
+   supported (iPhone, Firefox) backups fall back to a normal download. */
+var FOLDER_OK = typeof window.showDirectoryPicker === "function" && typeof indexedDB !== "undefined";
+var APP_SUBFOLDER = "Οχήματα";
+var folderName = null;
+
+function idbReq(mode, fn){
+  return new Promise(function(res, rej){
+    var open = indexedDB.open("shared-backups", 1);
+    open.onupgradeneeded = function(){ open.result.createObjectStore("handles"); };
+    open.onerror = function(){ rej(open.error); };
+    open.onsuccess = function(){
+      var db = open.result, tx = db.transaction("handles", mode), st = tx.objectStore("handles");
+      var q = fn(st), out = null;
+      if(q) q.onsuccess = function(){ out = q.result; };
+      tx.oncomplete = function(){ db.close(); res(out==null?null:out); };
+      tx.onerror = function(){ db.close(); rej(tx.error); };
+    };
+  });
+}
+function idbGet(k){ return idbReq("readonly", function(st){ return st.get(k); }); }
+function idbSet(k,v){ return idbReq("readwrite", function(st){ st.put(v,k); return null; }); }
+function idbDel(k){ return idbReq("readwrite", function(st){ st["delete"](k); return null; }); }
+
+function loadFolderName(){
+  if(!FOLDER_OK) return;
+  idbGet("root").then(function(h){
+    folderName = h ? h.name : null;
+    if(S.modal==="settings") render();
+  }).catch(function(){});
+}
+/* Returns this app's subfolder, asking for access again if Android forgot it. */
+function appDir(ask){
+  return idbGet("root").then(function(h){
+    if(!h) return null;
+    var o = {mode:"readwrite"};
+    return h.queryPermission(o).then(function(p){
+      if(p==="granted") return true;
+      if(!ask) return false;
+      return h.requestPermission(o).then(function(p2){ return p2==="granted"; });
+    }).then(function(ok){
+      return ok ? h.getDirectoryHandle(APP_SUBFOLDER, {create:true}) : null;
+    });
+  });
+}
+function pickFolder(){
+  window.showDirectoryPicker({id:"backups", mode:"readwrite", startIn:"downloads"})
+    .then(function(h){
+      return idbSet("root", h).then(function(){
+        folderName = h.name; S.draft.files = null;
+        toast(L("Φάκελος αντιγράφων: ","Backup folder: ")+h.name+" / "+APP_SUBFOLDER, true);
+      });
+    })
+    .catch(function(e){
+      if(e && e.name==="AbortError") return;   // user closed the picker
+      toast(L("Δεν ορίστηκε φάκελος.","Folder not set."));
+    });
+}
+function forgetFolder(){
+  if(!confirm(L("Να μη χρησιμοποιείται πια αυτός ο φάκελος; Τα αρχεία που υπάρχουν ήδη μέσα του δεν σβήνονται.",
+                "Stop using this folder? Files already in it are not deleted."))) return;
+  idbDel("root").then(function(){ folderName = null; S.draft.files = null; render(); });
+}
+function saveBackupToFolder(){
+  var text = JSON.stringify(backupPayload(), null, 2);
+  return appDir(true).then(function(dir){
+    if(!dir) return false;
+    return dir.getFileHandle(backupName(), {create:true})
+      .then(function(fh){ return fh.createWritable(); })
+      .then(function(w){ return w.write(text).then(function(){ return w.close(); }); })
+      .then(function(){ return true; });
+  });
+}
+/* Saves into the chosen folder when there is one, otherwise downloads. */
+function doBackup(){
+  if(!(FOLDER_OK && folderName)){ downloadBackup(); return; }
+  saveBackupToFolder().then(function(ok){
+    if(ok){
+      markBackedUp();
+      toast(L("Αποθηκεύτηκε στο ","Saved to ")+folderName+" / "+APP_SUBFOLDER, true);
+    } else {
+      toast(L("Δεν δόθηκε πρόσβαση στον φάκελο — έγινε κανονική λήψη.","No folder access — downloaded instead."));
+      downloadBackup();
+    }
+  }).catch(function(){ downloadBackup(); });
+}
+/* Lists the newest backups in this app's subfolder so one can be restored with a tap. */
+function listFolderBackups(){
+  appDir(true).then(function(dir){
+    if(!dir){ toast(L("Δεν δόθηκε πρόσβαση στον φάκελο.","No access to the folder.")); return; }
+    var names = [], it = dir.values();
+    function step(){
+      return it.next().then(function(r){
+        if(r.done) return;
+        if(r.value.kind==="file" && /\.json$/i.test(r.value.name)) names.push(r.value.name);
+        return step();
+      });
+    }
+    return step().then(function(){
+      names.sort(); names.reverse();
+      S.draft.files = names.slice(0, 10); render();
+    });
+  }).catch(function(){ toast(L("Δεν διαβάστηκε ο φάκελος.","Couldn't read the folder.")); });
+}
+function restoreFromFolder(name){
+  appDir(true).then(function(dir){
+    if(!dir) return;
+    return dir.getFileHandle(name)
+      .then(function(fh){ return fh.getFile(); })
+      .then(function(f){ return f.text(); })
+      .then(function(t){ if(restoreFromText(t)) goBack(); });
+  }).catch(function(){ toast(L("Δεν διαβάστηκε το αρχείο.","Couldn't read the file.")); });
 }
 
 function backupPayload(){
@@ -975,10 +1125,14 @@ APP.addEventListener("click", function(e){
   case "close": goBack(); return;
 
   /* -- settings -- */
-  case "openSettings": S.modal="settings"; S.draft={}; pushLayer(); break;
+  case "openSettings": S.modal="settings"; S.draft={}; pushLayer(); loadFolderName(); break;
+  case "pickFolder":   pickFolder(); return;
+  case "forgetFolder": forgetFolder(); return;
+  case "listFolder":   listFolderBackups(); return;
+  case "restoreNamed": restoreFromFolder(v); return;
   case "toggleLang":   setLang(LANG==="en"?"el":"en"); break;
   case "setLang":      setLang(v); break;
-  case "doBackup":     downloadBackup(); return;
+  case "doBackup":     doBackup(); return;
   case "shareBackup":  shareBackup(); return;
 
   /* -- vehicle -- */
@@ -1206,6 +1360,7 @@ document.addEventListener("click", function(e){
 });
 
 applyLang();
+loadFolderName();
 render();
 </script>
 </body>
