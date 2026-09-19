@@ -64,7 +64,7 @@ textarea{resize:none}
 .d-bad{background:var(--bad)} .d-unk{background:var(--dim2)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .gauge{display:flex;flex-direction:column;align-items:center;padding:14px 10px;text-align:center}
-.gauge svg{transform:rotate(-90deg)}
+.gwrap>svg{transform:rotate(-90deg)}
 .gwrap{position:relative;display:flex;align-items:center;justify-content:center}
 .gtxt{position:absolute;display:flex;flex-direction:column;align-items:center}
 .gval{font-size:19px;font-weight:700}
@@ -113,6 +113,20 @@ textarea{resize:none}
 .swatch.on{opacity:1;outline:2px solid #fff;outline-offset:2px}
 .toast{position:fixed;left:16px;right:16px;bottom:18px;z-index:80;background:rgba(244,63,94,.95);
   color:#fff;border-radius:12px;padding:12px;text-align:center;font-size:13px}
+.topbtn{width:42px;height:42px;border-radius:12px;background:var(--card);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-size:21px;flex:0 0 auto;color:var(--dim)}
+.sec{border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.35);
+  padding:13px;margin-bottom:12px}
+.sec h3{font-size:13px;text-transform:uppercase;display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.sec p{margin:0 0 11px;font-size:12.5px;color:var(--dim);line-height:1.45}
+.langbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  border-radius:12px;padding:12px;font-size:14px;font-weight:600;border:1px solid var(--line2);
+  background:rgba(255,255,255,.05);color:#d4d4d8}
+.langbtn.on{background:rgba(251,191,36,.16);color:#fcd34d;border-color:rgba(251,191,36,.45)}
+.filebtn{position:relative;overflow:hidden}
+.filebtn input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;padding:0;border:0}
+.toast.good{background:rgba(16,185,129,.95)}
 svg.i{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round;vertical-align:-.125em;flex:0 0 auto}
 </style>
@@ -149,7 +163,9 @@ var ICONS = {
   spark:["m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z","M5 3v4","M3 5h4"],
   folder:["M12 10v6","M9 13h6","M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"],
   layers:["m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z","m22 12.5-9.17 4.16a2 2 0 0 1-1.66 0L2 12.5","m22 17.5-9.17 4.16a2 2 0 0 1-1.66 0L2 17.5"],
-  trend:["M16 7h6v6","m22 7-8.5 8.5-5-5L2 17"]
+  trend:["M16 7h6v6","m22 7-8.5 8.5-5-5L2 17"],
+  gear:["M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z","M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
+  globe:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M2 12h20","M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"]
 };
 function icon(name, size){
   var p = ICONS[name]; if(!p) return "";
@@ -173,12 +189,14 @@ function num(v){ var n=Number(v); return isFinite(n)?n:0; }
 function fmtDate(iso){
   if(!iso) return "—";
   var p=iso.split("-"); if(p.length!==3) return "—";
-  var M=["Ιαν","Φεβ","Μαρ","Απρ","Μάι","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
+  var M=LANG==="en"
+    ? ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    : ["Ιαν","Φεβ","Μαρ","Απρ","Μάι","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
   return Number(p[2])+" "+M[Number(p[1])-1]+" "+p[0];
 }
 function fmtKm(n){
   if(n==null||n==="") return "—";
-  return num(n).toLocaleString("el-GR")+" χλμ";
+  return num(n).toLocaleString(LOC())+L(" χλμ"," km");
 }
 function daysBetween(a,b){
   if(!a||!b) return null;
@@ -189,6 +207,28 @@ function addDays(iso,n){
   var d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+n);
   var m=d.getMonth()+1, day=d.getDate();
   return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(day<10?"0":"")+day;
+}
+
+/* ---------------- Language (Greek / English) ---------------- */
+var LANG = (function(){ try{ return localStorage.getItem("veh.lang")==="en"?"en":"el"; }catch(e){ return "el"; } })();
+function L(el,en){ return LANG==="en"?en:el; }
+function LOC(){ return LANG==="en"?"en-GB":"el-GR"; }
+/* Built-in category/item names are stored in Greek; show them translated in
+   English mode. Anything the user typed is shown exactly as written. */
+var EN_NAMES = {
+  "Κινητήρας":"Engine","Φρένα":"Brakes","Ανάρτηση & Ελαστικά":"Suspension & Tyres",
+  "Ηλεκτρικά & Καμπίνα":"Electrical & Cabin","Λοιπά":"Other",
+  "Αλλαγή λαδιών κινητήρα":"Engine oil change","Φίλτρο λαδιού":"Oil filter","Φίλτρο αέρα":"Air filter",
+  "Φίλτρο καυσίμου":"Fuel filter","Μπουζί":"Spark plugs","Ιμάντας χρονισμού / καδένα":"Timing belt / chain",
+  "Ψυκτικό υγρό":"Coolant","Τακάκια φρένων εμπρός":"Front brake pads","Τακάκια φρένων πίσω":"Rear brake pads",
+  "Δίσκοι φρένων":"Brake discs","Υγρό φρένων":"Brake fluid","Ελαστικά":"Tyres","Αμορτισέρ":"Shock absorbers",
+  "Αλυσίδα & γρανάζια (μηχανή)":"Chain & sprockets (motorcycle)","Μπαταρία":"Battery",
+  "Φίλτρο καμπίνας (γύρης)":"Cabin (pollen) filter","ΚΤΕΟ":"Vehicle inspection","Γενικό service":"General service"
+};
+function tn(s){ return (LANG==="en" && EN_NAMES[s]) ? EN_NAMES[s] : s; }
+function applyLang(){
+  try{ document.documentElement.lang = LANG; }catch(e){}
+  try{ document.title = L("Ιστορικό Οχημάτων","Vehicle History"); }catch(e){}
 }
 
 /* ---------------- Storage (device-local, survives restarts) ---------------- */
@@ -232,11 +272,11 @@ var MOTO_BRANDS = ["Yamaha","Honda","Suzuki","Kawasaki","Piaggio","Vespa","KTM",
 
 /* ---------------- Status calculations ---------------- */
 function kteoStatus(v){
-  if(!v.kteoExpiry) return {level:"unk",label:"Δεν έχει οριστεί",days:null};
+  if(!v.kteoExpiry) return {level:"unk",label:L("Δεν έχει οριστεί","Not set"),days:null};
   var d = daysBetween(todayISO(), v.kteoExpiry);
-  if(d<0)  return {level:"bad", label:"Έληξε πριν "+Math.abs(d)+" ημέρες", days:d};
-  if(d<=30)return {level:"warn",label:"Λήγει σε "+d+" ημέρες", days:d};
-  return {level:"ok", label:"Ισχύει ακόμη "+d+" ημέρες", days:d};
+  if(d<0)  return {level:"bad", label:L("Έληξε πριν "+Math.abs(d)+" ημέρες","Expired "+Math.abs(d)+" days ago"), days:d};
+  if(d<=30)return {level:"warn",label:L("Λήγει σε "+d+" ημέρες","Expires in "+d+" days"), days:d};
+  return {level:"ok", label:L("Ισχύει ακόμη "+d+" ημέρες","Valid for "+d+" more days"), days:d};
 }
 function avgKmPerYear(v){
   if(!v.purchaseDate) return null;
@@ -273,12 +313,18 @@ var S = {
   selected: null,
   modal: null,     // {type, ...}
   draft: {},       // scratch state for the open modal
-  toast: ""
+  toast: "",
+  toastGood: false,
+  meta:     DB.read("veh.meta", {lastBackup:null, changes:0})
 };
-function saveVehicles(){ if(!DB.write("veh.vehicles",S.vehicles)) toast("Αποτυχία αποθήκευσης."); }
-function saveRecords(){ if(!DB.write("veh.records",S.records)) toast("Αποτυχία αποθήκευσης."); }
-function saveCats(){ if(!DB.write("veh.cats",S.cats)) toast("Αποτυχία αποθήκευσης."); }
-function toast(m){ S.toast=m; render(); setTimeout(function(){ S.toast=""; render(); },2600); }
+function saveMeta(){ DB.write("veh.meta", S.meta); }
+/* Counts real edits so the app can remind you to back up. */
+function touched(){ S.meta.changes = (S.meta.changes||0)+1; saveMeta(); }
+function needsBackup(){ return !S.meta.lastBackup || (S.meta.changes||0) >= 5; }
+function saveVehicles(){ if(!DB.write("veh.vehicles",S.vehicles)) toast(L("Αποτυχία αποθήκευσης.","Could not save.")); }
+function saveRecords(){ if(!DB.write("veh.records",S.records)) toast(L("Αποτυχία αποθήκευσης.","Could not save.")); }
+function saveCats(){ if(!DB.write("veh.cats",S.cats)) toast(L("Αποτυχία αποθήκευσης.","Could not save.")); }
+function toast(m,good){ S.toast=m; S.toastGood=!!good; render(); setTimeout(function(){ S.toast=""; render(); },2800); }
 
 function recsOf(id){ return S.records[id] || []; }
 function vehicleById(id){
@@ -330,23 +376,42 @@ function viewList(){
   };
   var sorted = S.vehicles.slice().sort(function(a,b){ return rank(a)-rank(b); });
 
-  var h = '<div class="wrap"><div style="padding:20px 0 16px">'+
-    '<div class="eyebrow">Γκαράζ</div><h1 class="ttl">Ιστορικό οχημάτων</h1></div>';
+  var h = '<div class="wrap"><div style="padding:20px 0 16px;display:flex;align-items:flex-start;gap:9px">'+
+    '<div style="flex:1;min-width:0"><div class="eyebrow">'+L("Γκαράζ","Garage")+'</div>'+
+    '<h1 class="ttl">'+L("Ιστορικό οχημάτων","Vehicle history")+'</h1></div>'+
+    '<button class="topbtn" data-act="toggleLang" title="'+L("Αλλαγή γλώσσας","Change language")+'">'+
+      (LANG==="en"?"🇬🇧":"🇬🇷")+'</button>'+
+    '<button class="topbtn" data-act="openSettings" title="'+L("Ρυθμίσεις","Settings")+'">'+icon("gear",20)+'</button>'+
+  '</div>';
+
+  if(S.vehicles.length && needsBackup()){
+    var ch = S.meta.changes||0;
+    h += '<button class="card" data-act="openSettings" style="width:100%;display:flex;gap:11px;'+
+      'align-items:center;padding:12px 13px;margin-bottom:14px;text-align:left">'+
+      '<span style="color:var(--sky)">'+icon("save",18)+'</span>'+
+      '<span style="flex:1"><span style="display:block;font-size:13.5px;font-weight:600">'+
+        L("Κράτα αντίγραφο ασφαλείας","Make a backup")+'</span>'+
+      '<span style="font-size:12px;color:var(--dim)">'+
+        (S.meta.lastBackup
+          ? L(ch+(ch===1?" αλλαγή":" αλλαγές")+" από το τελευταίο αντίγραφο.", ch+(ch===1?" change":" changes")+" since your last backup.")
+          : L("Δεν έχεις κρατήσει ακόμα αντίγραφο των δεδομένων σου.","You haven't backed up your data yet."))+
+      '</span></span></button>';
+  }
 
   if(alerts.length){
     h += '<div class="alert"><span class="warn">'+icon("alert",17)+'</span><div>'+
       '<div style="font-size:14px;font-weight:600;color:#fcd34d">'+alerts.length+
-      (alerts.length===1?" όχημα χρειάζεται":" οχήματα χρειάζονται")+' προσοχή</div>'+
+      (alerts.length===1?L(" όχημα χρειάζεται προσοχή"," vehicle needs attention"):L(" οχήματα χρειάζονται προσοχή"," vehicles need attention"))+'</div>'+
       '<div style="font-size:12px;color:rgba(251,191,36,.75);margin-top:2px">'+
-      'ΚΤΕΟ ή αλλαγή λαδιών πλησιάζει ή έχει λήξει.</div></div></div>';
+      L('ΚΤΕΟ ή αλλαγή λαδιών πλησιάζει ή έχει λήξει.','Inspection or oil change is due soon or overdue.')+'</div></div></div>';
   }
 
   if(!S.vehicles.length){
     h += '<div class="card empty">'+
       '<div style="font-size:26px;margin-bottom:8px" class="warn">'+icon("car",26)+'</div>'+
       '<div style="color:#d4d4d8;font-weight:600;font-size:14px;margin-bottom:3px">'+
-      'Δεν έχεις προσθέσει όχημα ακόμη</div>'+
-      '<div style="font-size:12.5px">Πρόσθεσε αυτοκίνητο ή μηχανή για να ξεκινήσεις το ιστορικό του.</div></div>';
+      L('Δεν έχεις προσθέσει όχημα ακόμη','No vehicles yet')+'</div>'+
+      '<div style="font-size:12.5px">'+L('Πρόσθεσε αυτοκίνητο ή μηχανή για να ξεκινήσεις το ιστορικό του.','Add a car or motorcycle to start its history.')+'</div></div>';
   }
 
   sorted.forEach(function(v){
@@ -363,13 +428,13 @@ function viewList(){
         '<span class="mono" style="font-size:13.5px;font-weight:600">'+fmtKm(v.currentKm)+'</span>'+
       '</div>'+
       '<div style="display:flex;gap:7px;flex-wrap:wrap">'+
-        statusPill(k.level,"ΚΤΕΟ "+(k.days==null?"—":k.days<0?"ληγμένο":k.days+"η"))+
-        statusPill(o.level,"Λάδια "+(o.remKm==null?"—":o.remKm<0?"τώρα":fmtKm(o.remKm)))+
+        statusPill(k.level,L("ΚΤΕΟ ","Inspection ")+(k.days==null?"—":k.days<0?L("ληγμένο","expired"):k.days+L("η","d")))+
+        statusPill(o.level,L("Λάδια ","Oil ")+(o.remKm==null?"—":o.remKm<0?L("τώρα","now"):fmtKm(o.remKm)))+
       '</div></button>';
   });
 
   h += '<button class="btn btn-p" style="width:100%;margin:6px 0 30px" data-act="newVehicle">'+
-    icon("plus",17)+' Προσθήκη οχήματος</button></div>';
+    icon("plus",17)+' '+L('Προσθήκη οχήματος','Add vehicle')+'</button></div>';
   return h;
 }
 
@@ -397,19 +462,19 @@ function viewDetail(v){
   /* Two tappable gauges */
   h += '<div class="grid2" style="margin-bottom:12px">'+
     '<button class="card gauge" data-act="quickKteo">'+
-      gauge(k.level, k.days==null?"—":k.days<0?"ΕΛΗΞΕ":k.days+"η","ΚΤΕΟ",kPct)+
+      gauge(k.level, k.days==null?"—":k.days<0?L("ΕΛΗΞΕ","EXPIRED"):k.days+L("η","d"),L("ΚΤΕΟ","Inspection"),kPct)+
       '<div style="font-size:12px;color:var(--dim);margin-top:9px">'+esc(k.label)+'</div>'+
       (v.kteoExpiry?'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">'+fmtDate(v.kteoExpiry)+'</div>':'')+
-      '<div class="warn" style="font-size:11.5px;font-weight:600;margin-top:8px">'+icon("pen",11)+' Ενημέρωση</div>'+
+      '<div class="warn" style="font-size:11.5px;font-weight:600;margin-top:8px">'+icon("pen",13)+' '+L('Ενημέρωση','Update')+'</div>'+
     '</button>'+
     '<button class="card gauge" data-act="quickOil">'+
-      gauge(o.level, o.remKm==null?"—":o.remKm<0?"ΤΩΡΑ":(Math.round(o.remKm/100)/10)+"χ","Λάδια",oPct)+
+      gauge(o.level, o.remKm==null?"—":o.remKm<0?L("ΤΩΡΑ","NOW"):(Math.round(o.remKm/100)/10)+L("χ","k"),L("Λάδια","Oil"),oPct)+
       '<div style="font-size:12px;color:var(--dim);margin-top:9px">'+
-        (o.remKm==null?"Καταχώρησε αλλαγή λαδιών":o.remKm<0?"Χρειάζεται αλλαγή":fmtKm(o.remKm)+" απόσταση")+'</div>'+
-      (o.nextDate?'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">έως '+fmtDate(o.nextDate)+'</div>':'')+
+        (o.remKm==null?L("Καταχώρησε αλλαγή λαδιών","Log an oil change"):o.remKm<0?L("Χρειάζεται αλλαγή","Change needed"):fmtKm(o.remKm)+L(" απόσταση"," to go"))+'</div>'+
+      (o.nextDate?'<div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">'+L('έως ','by ')+fmtDate(o.nextDate)+'</div>':'')+
       (o.estMonths?'<div style="font-size:11.5px;color:var(--sky);margin-top:5px">'+icon("trend",11)+
-        ' ~'+o.estMonths+(o.estMonths===1?" μήνα":" μήνες")+' με τη χρήση σου</div>':'')+
-      '<div class="warn" style="font-size:11.5px;font-weight:600;margin-top:8px">'+icon("pen",11)+' Ενημέρωση</div>'+
+        ' ~'+o.estMonths+(o.estMonths===1?L(" μήνα"," month"):L(" μήνες"," months"))+L(' με τη χρήση σου',' at your usage')+'</div>':'')+
+      '<div class="warn" style="font-size:11.5px;font-weight:600;margin-top:8px">'+icon("pen",13)+' '+L('Ενημέρωση','Update')+'</div>'+
     '</button>'+
   '</div>';
 
@@ -418,23 +483,23 @@ function viewDetail(v){
     'align-items:center;justify-content:space-between;padding:15px;margin-bottom:16px">'+
     '<span style="display:flex;align-items:center;gap:10px">'+
       '<span style="color:var(--dim)">'+icon("gauge",17)+'</span>'+
-      '<span style="text-align:left"><span style="display:block;font-size:12px;color:var(--dim)">Οδόμετρο</span>'+
+      '<span style="text-align:left"><span style="display:block;font-size:12px;color:var(--dim)">'+L('Οδόμετρο','Odometer')+'</span>'+
       '<span class="mono" style="font-size:18px;font-weight:700">'+fmtKm(v.currentKm)+'</span></span>'+
     '</span>'+
-    '<span class="warn" style="font-size:12px;font-weight:600">'+icon("pen",13)+' Ενημέρωση</span>'+
+    '<span class="warn" style="font-size:12px;font-weight:600">'+icon("pen",13)+' '+L('Ενημέρωση','Update')+'</span>'+
   '</button>';
 
   /* History */
   h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
     '<h2 style="font-size:13.5px;color:#d4d4d8;text-transform:uppercase;display:flex;align-items:center;gap:6px">'+
-      '<span style="color:var(--dim)">'+icon("history",15)+'</span> Ιστορικό</h2>'+
+      '<span style="color:var(--dim)">'+icon("history",15)+'</span> '+L('Ιστορικό','History')+'</h2>'+
     '<button class="btn btn-p" style="padding:8px 14px;font-size:12.5px" data-act="newService">'+
       icon("plus",14)+' Service</button></div>';
 
   if(!list.length){
     h += '<div class="card empty" style="margin-bottom:30px">'+
       '<div style="margin-bottom:7px">'+icon("wrench",22)+'</div>'+
-      '<div style="font-size:13.5px">Δεν υπάρχει καταγεγραμμένο service ακόμη.</div></div>';
+      '<div style="font-size:13.5px">'+L('Δεν υπάρχει καταγεγραμμένο service ακόμη.','No service logged yet.')+'</div></div>';
   }
   list.forEach(function(r){
     h += '<button class="card rec" data-act="editService" data-id="'+r.id+'">'+
@@ -442,11 +507,11 @@ function viewDetail(v){
         '<span><span class="mono" style="display:block;font-size:13.5px;font-weight:600">'+fmtDate(r.date)+'</span>'+
         '<span class="mono" style="font-size:12px;color:var(--dim)">'+fmtKm(r.km)+'</span></span>'+
         '<span style="display:flex;align-items:center;gap:9px">'+
-          (r.cost!=null?'<span class="mono warn" style="font-size:12.5px">'+num(r.cost).toLocaleString("el-GR")+'€</span>':'')+
+          (r.cost!=null?'<span class="mono warn" style="font-size:12.5px">'+num(r.cost).toLocaleString(LOC())+'€</span>':'')+
         '</span>'+
       '</div>'+
       '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        r.items.map(function(i){ return '<span class="tag">'+esc(i)+'</span>'; }).join("")+
+        r.items.map(function(i){ return '<span class="tag">'+esc(tn(i))+'</span>'; }).join("")+
       '</div>'+
       (r.notes?'<div style="font-size:12px;color:var(--dim);margin-top:7px">'+esc(r.notes)+'</div>':'')+
     '</button>';
@@ -489,56 +554,56 @@ function modalVehicle(){
         var on = d.type===t;
         return '<button class="chip'+(on?" on":"")+'" data-act="type" data-v="'+t+'" '+
           'style="flex:1;justify-content:center;padding:11px">'+
-          icon(t==="moto"?"bike":"car",16)+' '+(t==="moto"?"Μηχανή":"Αυτοκίνητο")+'</button>';
+          icon(t==="moto"?"bike":"car",16)+' '+(t==="moto"?L("Μηχανή","Motorcycle"):L("Αυτοκίνητο","Car"))+'</button>';
       }).join("")+
     '</div>'+
-    field("Πινακίδα", txt("plate",d.plate,'class="mono" style="letter-spacing:.1em" placeholder="π.χ. ΑΒΗ-1234"'))+
+    field(L("Πινακίδα","Plate"), txt("plate",d.plate,'class="mono" style="letter-spacing:.1em" placeholder="'+L("π.χ. ΑΒΗ-1234","e.g. ABH-1234")+'"'))+
     '<div class="row">'+
-      '<div>'+field("Μάρκα",
-        '<div class="ac">'+txt("brand",d.brand,'placeholder="π.χ. Toyota" data-ac="1"')+
+      '<div>'+field(L("Μάρκα","Make"),
+        '<div class="ac">'+txt("brand",d.brand,'placeholder="'+L("π.χ.","e.g.")+' Toyota" data-ac="1"')+
         (matches.length?'<div class="aclist">'+matches.map(function(b){
           return '<button class="acitem" data-act="pickBrand" data-v="'+esc(b)+'">'+esc(b)+'</button>';
         }).join("")+'</div>':'')+'</div>')+'</div>'+
-      '<div>'+field("Μοντέλο", txt("model",d.model,'placeholder="π.χ. Yaris"'))+'</div>'+
+      '<div>'+field(L("Μοντέλο","Model"), txt("model",d.model,'placeholder="'+L("π.χ.","e.g.")+' Yaris"'))+'</div>'+
     '</div>'+
     '<div class="row">'+
-      '<div>'+field("Έτος", txt("year",d.year,'class="mono" inputmode="numeric" maxlength="4"'))+'</div>'+
-      '<div>'+field("Τρέχοντα χιλιόμετρα", txt("currentKm",d.currentKm,'class="mono" inputmode="numeric"'))+'</div>'+
+      '<div>'+field(L("Έτος","Year"), txt("year",d.year,'class="mono" inputmode="numeric" maxlength="4"'))+'</div>'+
+      '<div>'+field(L("Τρέχοντα χιλιόμετρα","Current mileage (km)"), txt("currentKm",d.currentKm,'class="mono" inputmode="numeric"'))+'</div>'+
     '</div>'+
     '<div class="divider"></div>'+
-    field("Λήξη ΚΤΕΟ",
+    field(L("Λήξη ΚΤΕΟ","Inspection expiry"),
       '<input type="date" name="kteoExpiry" value="'+esc(d.kteoExpiry||"")+'" class="mono">')+
     '<div class="divider"></div>'+
-    '<label class="lbl">Διάστημα αλλαγής λαδιών</label>'+
+    '<label class="lbl">'+L('Διάστημα αλλαγής λαδιών','Oil change interval')+'</label>'+
     '<div class="row" style="margin-bottom:5px">'+
       '<div>'+txt("oilIntervalKm",d.oilIntervalKm,'class="mono" inputmode="numeric"')+
-        '<div class="hint">χιλιόμετρα</div></div>'+
+        '<div class="hint">'+L('χιλιόμετρα','kilometres')+'</div></div>'+
       '<div>'+txt("oilIntervalMonths",d.oilIntervalMonths,'class="mono" inputmode="numeric"')+
-        '<div class="hint">μήνες</div></div>'+
+        '<div class="hint">'+L('μήνες','months')+'</div></div>'+
     '</div>'+
-    '<div class="hint" style="margin-bottom:12px">Όποιο από τα δύο συμπληρωθεί πρώτο.</div>'+
+    '<div class="hint" style="margin-bottom:12px">'+L('Όποιο από τα δύο συμπληρωθεί πρώτο.','Whichever comes first.')+'</div>'+
     '<div class="divider"></div>'+
-    '<label class="lbl">Μέση ετήσια χρήση (προαιρετικό)</label>'+
+    '<label class="lbl">'+L('Μέση ετήσια χρήση (προαιρετικό)','Average yearly usage (optional)')+'</label>'+
     '<div class="row" style="margin-bottom:5px">'+
       '<div><input type="date" name="purchaseDate" value="'+esc(d.purchaseDate||"")+'" class="mono">'+
-        '<div class="hint">ημερομηνία αγοράς</div></div>'+
+        '<div class="hint">'+L('ημερομηνία αγοράς','purchase date')+'</div></div>'+
       '<div>'+txt("kmAtPurchase",d.kmAtPurchase,'class="mono" inputmode="numeric" placeholder="0"')+
-        '<div class="hint">χλμ κατά την αγορά</div></div>'+
+        '<div class="hint">'+L('χλμ κατά την αγορά','km at purchase')+'</div></div>'+
     '</div>';
 
   var est = avgKmPerYear({purchaseDate:d.purchaseDate,kmAtPurchase:d.kmAtPurchase,currentKm:d.currentKm});
   body += est
-    ? '<div class="hint warn" style="margin-bottom:6px">≈ '+Math.round(est).toLocaleString("el-GR")+
-      ' χλμ/έτος — θα εκτιμάται πότε πλησιάζει η επόμενη αλλαγή.</div>'
-    : '<div class="hint" style="margin-bottom:6px">Συμπλήρωσε ημερομηνία αγοράς για εκτίμηση της επόμενης αλλαγής λαδιών.</div>';
+    ? '<div class="hint warn" style="margin-bottom:6px">≈ '+Math.round(est).toLocaleString(LOC())+
+      L(' χλμ/έτος — θα εκτιμάται πότε πλησιάζει η επόμενη αλλαγή.',' km/year — used to estimate when the next change is due.')+'</div>'
+    : '<div class="hint" style="margin-bottom:6px">'+L('Συμπλήρωσε ημερομηνία αγοράς για εκτίμηση της επόμενης αλλαγής λαδιών.','Add the purchase date to estimate the next oil change.')+'</div>';
 
   var ok = (d.plate||"").trim() && (d.brand||"").trim();
   var footer =
     (d.id?'<button class="btn btn-d" data-act="deleteVehicle">'+icon("trash",16)+'</button>':'')+
-    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
+    '<button class="btn btn-s" style="flex:1" data-act="close">'+L('Άκυρο','Cancel')+'</button>'+
     '<button class="btn btn-p" style="flex:1" data-act="saveVehicle"'+(ok?"":" disabled")+'>'+
-      icon("save",15)+' Αποθήκευση</button>';
-  return sheet(d.id?"Επεξεργασία οχήματος":"Νέο όχημα",null,body,footer);
+      icon("save",15)+' '+L('Αποθήκευση','Save')+'</button>';
+  return sheet(d.id?L("Επεξεργασία οχήματος","Edit vehicle"):L("Νέο όχημα","New vehicle"),null,body,footer);
 }
 
 /* ----- Service form ----- */
@@ -553,15 +618,15 @@ function modalService(){
 
   var body =
     '<div class="row" style="margin-bottom:14px">'+
-      '<div><label class="lbl">Ημερομηνία</label>'+
+      '<div><label class="lbl">'+L('Ημερομηνία','Date')+'</label>'+
         '<input type="date" name="date" value="'+esc(d.date)+'" class="mono"></div>'+
-      '<div><label class="lbl">Χιλιόμετρα</label>'+
+      '<div><label class="lbl">'+L('Χιλιόμετρα','Kilometres')+'</label>'+
         txt("km",d.km,'class="mono" inputmode="numeric"')+'</div>'+
     '</div>'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">'+
-      '<label class="lbl" style="margin:0">Τι έγινε</label>'+
+      '<label class="lbl" style="margin:0">'+L('Τι έγινε','Work done')+'</label>'+
       '<button data-act="openCats" style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:4px">'+
-        icon("settings",13)+' Κατηγορίες</button>'+
+        icon("settings",13)+' '+L('Κατηγορίες','Categories')+'</button>'+
     '</div>'+
     '<div class="tabs">'+
       S.cats.map(function(c){
@@ -570,7 +635,7 @@ function modalService(){
         return '<button class="tab'+(on?" on":"")+'" data-act="catTab" data-v="'+c.key+'"'+
           (on?' style="border-color:'+COLORS[c.color]+'88;color:'+COLORS[c.color]+
              ';background:'+COLORS[c.color]+'22"':'')+'>'+
-          icon(c.icon,14)+' '+esc(c.label)+(n?'<span class="cnt">'+n+'</span>':'')+'</button>';
+          icon(c.icon,14)+' '+esc(tn(c.label))+(n?'<span class="cnt">'+n+'</span>':'')+'</button>';
       }).join("")+
     '</div>'+
     '<div class="pool">'+
@@ -579,9 +644,9 @@ function modalService(){
             var on = (d.items||[]).indexOf(it)>=0;
             return '<button class="chip'+(on?" on":"")+'" data-act="toggleItem" data-v="'+esc(it)+'"'+
               (on?' style="background:'+COLORS[cat.color]+'26;color:'+COLORS[cat.color]+
-                 ';border-color:'+COLORS[cat.color]+'77"':'')+'>'+esc(it)+'</button>';
+                 ';border-color:'+COLORS[cat.color]+'77"':'')+'>'+esc(tn(it))+'</button>';
           }).join("")
-        : '<div class="hint">Άδεια κατηγορία — πρόσθεσε στοιχεία από τις «Κατηγορίες».</div>')+
+        : '<div class="hint">'+L('Άδεια κατηγορία — πρόσθεσε στοιχεία από τις «Κατηγορίες».','Empty category — add items from “Categories”.')+'</div>')+
     '</div>';
 
   if(extras.length){
@@ -594,57 +659,57 @@ function modalService(){
 
   body +=
     '<div style="display:flex;gap:8px;margin-bottom:14px">'+
-      txt("customItem",d.customItem,'placeholder="Κάτι άλλο..." style="flex:1"')+
+      txt("customItem",d.customItem,'placeholder="'+L("Κάτι άλλο...","Something else...")+'" style="flex:1"')+
       '<button class="btn btn-s" style="flex:0 0 auto;padding:11px 14px" data-act="addCustom">'+icon("plus",16)+'</button>'+
     '</div>'+
-    field("Κόστος (€)", txt("cost",d.cost,'class="mono" inputmode="decimal"'))+
-    field("Σημειώσεις",
-      '<textarea name="notes" rows="2" placeholder="π.χ. συνεργείο, παρατηρήσεις...">'+esc(d.notes||"")+'</textarea>');
+    field(L("Κόστος (€)","Cost (€)"), txt("cost",d.cost,'class="mono" inputmode="decimal"'))+
+    field(L("Σημειώσεις","Notes"),
+      '<textarea name="notes" rows="2" placeholder="'+L("π.χ. συνεργείο, παρατηρήσεις...","e.g. garage, remarks...")+'">'+esc(d.notes||"")+'</textarea>');
 
   var ok = (d.items||[]).length && d.km!=="" && d.km!=null;
   var footer =
     (d.id?'<button class="btn btn-d" data-act="deleteService">'+icon("trash",16)+'</button>':'')+
-    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
+    '<button class="btn btn-s" style="flex:1" data-act="close">'+L('Άκυρο','Cancel')+'</button>'+
     '<button class="btn btn-p" style="flex:1" data-act="saveService"'+(ok?"":" disabled")+'>'+
-      icon("save",15)+' '+(d.id?"Αποθήκευση":"Καταχώρηση")+'</button>';
-  return sheet(d.id?"Επεξεργασία service":"Νέα καταχώρηση service",null,body,footer);
+      icon("save",15)+' '+(d.id?L("Αποθήκευση","Save"):L("Καταχώρηση","Add"))+'</button>';
+  return sheet(d.id?L("Επεξεργασία service","Edit service"):L("Νέα καταχώρηση service","New service entry"),null,body,footer);
 }
 
 /* ----- Quick edits ----- */
 function modalKteo(){
   var d = S.draft;
-  var body = field("Ημερομηνία λήξης",
+  var body = field(L("Ημερομηνία λήξης","Expiry date"),
     '<input type="date" name="kteoExpiry" value="'+esc(d.kteoExpiry||"")+'" class="mono">');
-  return sheet("Λήξη ΚΤΕΟ","calendar",body,
-    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
-    '<button class="btn btn-p" style="flex:1" data-act="saveKteo">'+icon("save",15)+' Αποθήκευση</button>');
+  return sheet(L("Λήξη ΚΤΕΟ","Inspection expiry"),"calendar",body,
+    '<button class="btn btn-s" style="flex:1" data-act="close">'+L('Άκυρο','Cancel')+'</button>'+
+    '<button class="btn btn-p" style="flex:1" data-act="saveKteo">'+icon("save",15)+' '+L('Αποθήκευση','Save')+'</button>');
 }
 function modalOil(){
   var d = S.draft;
   var body =
     '<div class="row" style="margin-bottom:12px">'+
-      '<div><label class="lbl">Τελευταία αλλαγή</label>'+
+      '<div><label class="lbl">'+L('Τελευταία αλλαγή','Last change')+'</label>'+
         '<input type="date" name="lastOilDate" value="'+esc(d.lastOilDate||"")+'" class="mono"></div>'+
-      '<div><label class="lbl">Χλμ τότε</label>'+
+      '<div><label class="lbl">'+L('Χλμ τότε','Km at the time')+'</label>'+
         txt("lastOilKm",d.lastOilKm,'class="mono" inputmode="numeric"')+'</div>'+
     '</div>'+
-    '<label class="lbl">Διάστημα αλλαγής</label>'+
+    '<label class="lbl">'+L('Διάστημα αλλαγής','Change interval')+'</label>'+
     '<div class="row">'+
       '<div>'+txt("oilIntervalKm",d.oilIntervalKm,'class="mono" inputmode="numeric"')+
-        '<div class="hint">χιλιόμετρα</div></div>'+
+        '<div class="hint">'+L('χιλιόμετρα','kilometres')+'</div></div>'+
       '<div>'+txt("oilIntervalMonths",d.oilIntervalMonths,'class="mono" inputmode="numeric"')+
-        '<div class="hint">μήνες</div></div>'+
+        '<div class="hint">'+L('μήνες','months')+'</div></div>'+
     '</div><div style="height:10px"></div>';
-  return sheet("Λάδια","droplet",body,
-    '<button class="btn btn-s" style="flex:1" data-act="close">Άκυρο</button>'+
-    '<button class="btn btn-p" style="flex:1" data-act="saveOil">'+icon("save",15)+' Αποθήκευση</button>');
+  return sheet(L("Λάδια","Oil"),"droplet",body,
+    '<button class="btn btn-s" style="flex:1" data-act="close">'+L('Άκυρο','Cancel')+'</button>'+
+    '<button class="btn btn-p" style="flex:1" data-act="saveOil">'+icon("save",15)+' '+L('Αποθήκευση','Save')+'</button>');
 }
 
 /* ----- Category manager ----- */
 function modalCats(){
   var d = S.draft;
   var body = '<div class="hint" style="margin:-8px 0 14px">'+
-    'Πρόσθεσε, αφαίρεσε, μετονόμασε ή άλλαξε σειρά σε κατηγορίες και στα στοιχεία τους.</div>';
+    L('Πρόσθεσε, αφαίρεσε, μετονόμασε ή άλλαξε σειρά σε κατηγορίες και στα στοιχεία τους.','Add, remove, rename or reorder categories and their items.')+'</div>';
 
   S.cats.forEach(function(c,idx){
     var open = d.expanded===c.key;
@@ -654,7 +719,7 @@ function modalCats(){
       (d.renCat===c.key
         ? txt("renCatVal",d.renCatVal,'style="flex:1;padding:7px 9px;font-size:14px"')
         : '<button data-act="expandCat" data-v="'+c.key+'" style="flex:1;text-align:left;'+
-          'font-size:14px;font-weight:600;min-width:0">'+esc(c.label)+
+          'font-size:14px;font-weight:600;min-width:0">'+esc(tn(c.label))+
           ' <span style="color:var(--dim2);font-weight:400">· '+c.items.length+'</span></button>')+
       (d.renCat===c.key
         ? '<button class="iconbtn ok" data-act="renCatSave" data-v="'+c.key+'">'+icon("check",15)+'</button>'
@@ -672,7 +737,7 @@ function modalCats(){
           (ren
             ? txt("renItemVal",d.renItemVal,'style="flex:1;padding:5px 8px;font-size:12.5px"')
             : '<span style="flex:1;font-size:12.5px;min-width:0;overflow:hidden;'+
-              'text-overflow:ellipsis;white-space:nowrap">'+esc(it)+'</span>')+
+              'text-overflow:ellipsis;white-space:nowrap">'+esc(tn(it))+'</span>')+
           (ren
             ? '<button class="iconbtn ok" data-act="renItemSave" data-v="'+c.key+'" data-i="'+esc(it)+'">'+icon("check",14)+'</button>'
             : '<button class="iconbtn" data-act="renItem" data-v="'+c.key+'" data-i="'+esc(it)+'">'+icon("pen",12)+'</button>')+
@@ -682,7 +747,7 @@ function modalCats(){
         '</div>';
       });
       body += '<div style="display:flex;gap:6px;margin-top:9px">'+
-        txt("newItem_"+c.key,d["newItem_"+c.key],'placeholder="Νέο στοιχείο..." style="flex:1;padding:8px 10px;font-size:12.5px"')+
+        txt("newItem_"+c.key,d["newItem_"+c.key],'placeholder="'+L("Νέο στοιχείο...","New item...")+'" style="flex:1;padding:8px 10px;font-size:12.5px"')+
         '<button class="btn btn-s" style="flex:0 0 auto;padding:8px 11px" data-act="addItem" data-v="'+c.key+'">'+icon("plus",14)+'</button>'+
       '</div></div>';
     }
@@ -691,13 +756,13 @@ function modalCats(){
 
   if(d.addingCat){
     body += '<div class="mgr" style="padding:12px">'+
-      txt("newCatLabel",d.newCatLabel,'placeholder="Όνομα κατηγορίας" style="margin-bottom:11px"')+
-      '<div class="lbl">Χρώμα</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">'+
+      txt("newCatLabel",d.newCatLabel,'placeholder="'+L("Όνομα κατηγορίας","Category name")+'" style="margin-bottom:11px"')+
+      '<div class="lbl">'+L('Χρώμα','Colour')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">'+
         COLOR_KEYS.map(function(k){
           return '<button class="swatch'+(d.newCatColor===k?" on":"")+'" data-act="pickColor" data-v="'+k+'" '+
             'style="background:'+COLORS[k]+'"></button>';
         }).join("")+'</div>'+
-      '<div class="lbl">Εικονίδιο</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px">'+
+      '<div class="lbl">'+L('Εικονίδιο','Icon')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px">'+
         ICON_KEYS.map(function(k){
           var on = d.newCatIcon===k;
           return '<button class="ic" data-act="pickIcon" data-v="'+k+'" style="border:1px solid '+
@@ -705,18 +770,118 @@ function modalCats(){
             ';color:'+(on?"#fcd34d":"var(--dim)")+'">'+icon(k,15)+'</button>';
         }).join("")+'</div>'+
       '<div style="display:flex;gap:8px">'+
-        '<button class="btn btn-s" style="flex:1;padding:9px;font-size:12.5px" data-act="cancelAddCat">Άκυρο</button>'+
+        '<button class="btn btn-s" style="flex:1;padding:9px;font-size:12.5px" data-act="cancelAddCat">'+L('Άκυρο','Cancel')+'</button>'+
         '<button class="btn btn-p" style="flex:1;padding:9px;font-size:12.5px" data-act="addCat"'+
-          ((d.newCatLabel||"").trim()?"":" disabled")+'>Προσθήκη</button>'+
+          ((d.newCatLabel||"").trim()?"":" disabled")+'>'+L('Προσθήκη','Add')+'</button>'+
       '</div></div>';
   } else {
     body += '<button class="btn btn-s" style="width:100%;margin-bottom:4px" data-act="startAddCat">'+
-      icon("folder",15)+' Νέα κατηγορία</button>';
+      icon("folder",15)+' '+L('Νέα κατηγορία','New category')+'</button>';
   }
 
-  return sheet("Κατηγορίες service","layers",body,
-    '<button class="btn btn-p" style="flex:1" data-act="closeCats">Έτοιμο</button>');
+  return sheet(L("Κατηγορίες service","Service categories"),"layers",body,
+    '<button class="btn btn-p" style="flex:1" data-act="closeCats">'+L('Έτοιμο','Done')+'</button>');
 }
+/* ----- Settings: language, backup, restore ----- */
+function modalSettings(){
+  var nV = S.vehicles.length, nR = 0;
+  Object.keys(S.records).forEach(function(k){ nR += (S.records[k]||[]).length; });
+  var canShare = !!(navigator.canShare && window.File);
+
+  var body =
+    '<div class="sec"><h3>'+icon("globe",15)+' '+L("Γλώσσα","Language")+'</h3>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="langbtn'+(LANG==="el"?" on":"")+'" data-act="setLang" data-v="el">🇬🇷 Ελληνικά</button>'+
+        '<button class="langbtn'+(LANG==="en"?" on":"")+'" data-act="setLang" data-v="en">🇬🇧 English</button>'+
+      '</div></div>'+
+
+    '<div class="sec"><h3><span style="color:var(--sky)">'+icon("save",15)+'</span> '+
+        L("Αντίγραφο ασφαλείας","Backup")+'</h3>'+
+      '<p>'+L("Κατεβάζει ένα αρχείο με όλα τα οχήματα, το ιστορικό και τις κατηγορίες. "+
+              "Φύλαξέ το κάπου ασφαλές (π.χ. Google Drive ή email), γιατί τα δεδομένα ζουν μόνο σε αυτή τη συσκευή.",
+              "Downloads a file with all vehicles, history and categories. Keep it somewhere safe "+
+              "(e.g. Google Drive or email) — the data only lives on this device.")+'</p>'+
+      '<p style="margin-top:-5px">'+L("Περιέχει: ","Contains: ")+nV+(nV===1?L(" όχημα, "," vehicle, "):L(" οχήματα, "," vehicles, "))+nR+
+        (nR===1?L(" καταχώρηση service."," service entry."):L(" καταχωρήσεις service."," service entries."))+'<br>'+
+        L("Τελευταίο αντίγραφο: ","Last backup: ")+
+        (S.meta.lastBackup ? fmtDate(S.meta.lastBackup) : L("ποτέ","never"))+'</p>'+
+      '<button class="btn btn-p" style="width:100%" data-act="doBackup">'+icon("save",15)+' '+
+        L("Λήψη αντιγράφου","Download backup")+'</button>'+
+      (canShare ? '<button class="btn btn-s" style="width:100%;margin-top:8px" data-act="shareBackup">'+
+        icon("folder",15)+' '+L("Αποστολή σε Drive / email…","Send to Drive / email…")+'</button>' : '')+
+    '</div>'+
+
+    '<div class="sec"><h3><span class="warn">'+icon("history",15)+'</span> '+L("Επαναφορά","Restore")+'</h3>'+
+      '<p>'+L("Διάλεξε ένα αρχείο αντιγράφου για να επαναφέρεις τα δεδομένα. Θα αντικαταστήσει ό,τι υπάρχει τώρα στην εφαρμογή.",
+              "Pick a backup file to restore your data. It replaces everything currently in the app.")+'</p>'+
+      '<label class="btn btn-s filebtn" style="width:100%">'+icon("history",15)+' '+
+        L("Επιλογή αρχείου αντιγράφου","Choose backup file")+
+        '<input type="file" id="restoreFile" accept=".json,application/json"></label>'+
+    '</div>';
+
+  return sheet(L("Ρυθμίσεις","Settings"),"gear",body,
+    '<button class="btn btn-p" style="flex:1" data-act="close">'+L("Έτοιμο","Done")+'</button>');
+}
+
+function backupPayload(){
+  return {
+    app: "vehicle-history", version: 1, exported: new Date().toISOString(),
+    lang: LANG, vehicles: S.vehicles, records: S.records, cats: S.cats
+  };
+}
+function backupName(){ return "oximata-antigrafo-"+todayISO()+".json"; }
+function markBackedUp(){
+  S.meta.lastBackup = todayISO(); S.meta.changes = 0; saveMeta();
+}
+function downloadBackup(){
+  try{
+    var blob = new Blob([JSON.stringify(backupPayload(), null, 2)], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = backupName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    markBackedUp();
+    toast(L("Το αντίγραφο κατέβηκε στις Λήψεις.","Backup saved to Downloads."), true);
+  }catch(e){
+    toast(L("Η λήψη απέτυχε.","Download failed."));
+  }
+}
+function shareBackup(){
+  try{
+    var file = new File([JSON.stringify(backupPayload(), null, 2)], backupName(), {type:"application/json"});
+    if(!navigator.canShare({files:[file]})){ downloadBackup(); return; }
+    navigator.share({files:[file], title: L("Αντίγραφο οχημάτων","Vehicle backup")})
+      .then(function(){ markBackedUp(); toast(L("Το αντίγραφο στάλθηκε.","Backup sent."), true); })
+      .catch(function(){ /* user cancelled */ });
+  }catch(e){ downloadBackup(); }
+}
+/* Validates a backup file and, after confirmation, replaces the app data. */
+function restoreFromText(text){
+  var data;
+  try{ data = JSON.parse(text); }catch(e){
+    toast(L("Το αρχείο δεν είναι έγκυρο αντίγραφο.","That file isn't a valid backup.")); return false;
+  }
+  if(!data || !Array.isArray(data.vehicles) || typeof data.records!=="object" || data.records===null){
+    toast(L("Το αρχείο δεν είναι αντίγραφο αυτής της εφαρμογής.","That file isn't a backup from this app.")); return false;
+  }
+  var nV = data.vehicles.length, nR = 0;
+  Object.keys(data.records).forEach(function(k){ nR += (data.records[k]||[]).length; });
+  var msg = L("Επαναφορά: "+nV+(nV===1?" όχημα":" οχήματα")+" και "+nR+(nR===1?" καταχώρηση":" καταχωρήσεις")+
+                ";\nΤα τρέχοντα δεδομένα θα αντικατασταθούν.",
+              "Restore "+nV+(nV===1?" vehicle":" vehicles")+" and "+nR+(nR===1?" entry":" entries")+
+                "?\nCurrent data will be replaced.");
+  if(!confirm(msg)) return false;
+  S.vehicles = data.vehicles;
+  S.records  = data.records;
+  if(Array.isArray(data.cats) && data.cats.length) S.cats = data.cats;
+  saveVehicles(); saveRecords(); saveCats();
+  S.meta.lastBackup = S.meta.lastBackup || todayISO(); S.meta.changes = 0; saveMeta();
+  S.selected = null;
+  toast(L("Η επαναφορά ολοκληρώθηκε.","Restore complete."), true);
+  return true;
+}
+
 /* ---------------- Render ---------------- */
 var APP = document.getElementById("app");
 
@@ -727,7 +892,8 @@ function render(){
   else if(S.modal==="kteo")    html += modalKteo();
   else if(S.modal==="oil")     html += modalOil();
   else if(S.modal==="cats")    html += modalCats();
-  if(S.toast) html += '<div class="toast">'+esc(S.toast)+'</div>';
+  else if(S.modal==="settings") html += modalSettings();
+  if(S.toast) html += '<div class="toast'+(S.toastGood?" good":"")+'">'+esc(S.toast)+'</div>';
 
   APP.innerHTML = html;
 
@@ -759,6 +925,18 @@ APP.addEventListener("input", function(e){
 });
 
 APP.addEventListener("change", function(e){
+  if(e.target.id==="restoreFile"){
+    var f = e.target.files && e.target.files[0];
+    if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      if(restoreFromText(String(rd.result))) goBack();
+    };
+    rd.onerror = function(){ toast(L("Δεν διαβάστηκε το αρχείο.","Couldn't read the file.")); };
+    rd.readAsText(f);
+    e.target.value = "";
+    return;
+  }
   var name = e.target.getAttribute("name");
   if(name) S.draft[name] = e.target.value;
 });
@@ -796,6 +974,13 @@ APP.addEventListener("click", function(e){
   case "back":  goBack(); return;
   case "close": goBack(); return;
 
+  /* -- settings -- */
+  case "openSettings": S.modal="settings"; S.draft={}; pushLayer(); break;
+  case "toggleLang":   setLang(LANG==="en"?"el":"en"); break;
+  case "setLang":      setLang(v); break;
+  case "doBackup":     downloadBackup(); return;
+  case "shareBackup":  shareBackup(); return;
+
   /* -- vehicle -- */
   case "newVehicle":
     S.modal="vehicle"; pushLayer();
@@ -829,22 +1014,22 @@ APP.addEventListener("click", function(e){
     if(old){ rec.lastOilKm=old.lastOilKm; rec.lastOilDate=old.lastOilDate;
              for(var i=0;i<S.vehicles.length;i++) if(S.vehicles[i].id===rec.id) S.vehicles[i]=rec; }
     else { rec.lastOilKm=null; rec.lastOilDate=null; S.vehicles.push(rec); S.records[rec.id]=[]; saveRecords(); }
-    saveVehicles();
+    saveVehicles(); touched();
     if(d.id) syncFromHistory(rec.id);
     goBack(); return;
   }
   case "deleteVehicle":
-    if(!confirm("Διαγραφή οχήματος και όλου του ιστορικού του;")) return;
+    if(!confirm(L("Διαγραφή οχήματος και όλου του ιστορικού του;","Delete this vehicle and all its history?"))) return;
     S.vehicles = S.vehicles.filter(function(x){ return x.id!==d.id; });
     delete S.records[d.id];
-    saveVehicles(); saveRecords();
+    saveVehicles(); saveRecords(); touched();
     if(S.selected===d.id){ S.selected=null; consumeLayer(); }
     goBack(); return;
 
   /* -- quick edits -- */
   case "quickKteo": S.modal="kteo"; pushLayer(); S.draft={kteoExpiry:veh.kteoExpiry||""}; break;
   case "saveKteo":
-    veh.kteoExpiry = d.kteoExpiry||null; saveVehicles(); goBack(); return;
+    veh.kteoExpiry = d.kteoExpiry||null; saveVehicles(); touched(); goBack(); return;
   case "quickOil":
     S.modal="oil"; pushLayer();
     S.draft={lastOilDate:veh.lastOilDate||"",lastOilKm:veh.lastOilKm==null?"":veh.lastOilKm,
@@ -855,7 +1040,7 @@ APP.addEventListener("click", function(e){
     veh.lastOilKm   = d.lastOilKm===""?null:num(d.lastOilKm);
     veh.oilIntervalKm = num(d.oilIntervalKm)||10000;
     veh.oilIntervalMonths = num(d.oilIntervalMonths)||12;
-    saveVehicles(); goBack(); return;
+    saveVehicles(); touched(); goBack(); return;
 
   /* -- service records -- */
   case "newService":
@@ -890,13 +1075,13 @@ APP.addEventListener("click", function(e){
                cost:d.cost===""?null:num(d.cost),notes:(d.notes||"").trim()};
     if(d.id) list = list.map(function(x){ return x.id===d.id?obj:x; });
     else list.push(obj);
-    S.records[S.selected]=list; saveRecords(); syncFromHistory(S.selected);
+    S.records[S.selected]=list; saveRecords(); syncFromHistory(S.selected); touched();
     goBack(); return;
   }
   case "deleteService":
-    if(!confirm("Διαγραφή αυτής της καταχώρησης;")) return;
+    if(!confirm(L("Διαγραφή αυτής της καταχώρησης;","Delete this entry?"))) return;
     S.records[S.selected] = recsOf(S.selected).filter(function(x){ return x.id!==d.id; });
-    saveRecords(); syncFromHistory(S.selected);
+    saveRecords(); syncFromHistory(S.selected); touched();
     goBack(); return;
 
   /* -- category manager -- */
@@ -910,17 +1095,17 @@ APP.addEventListener("click", function(e){
     break;
   }
   case "delCat":
-    if(!confirm("Διαγραφή κατηγορίας;")) return;
+    if(!confirm(L("Διαγραφή κατηγορίας;","Delete this category?"))) return;
     S.cats = S.cats.filter(function(c){ return c.key!==v; }); saveCats();
     break;
   case "renCat": {
     var c0 = S.cats.filter(function(c){ return c.key===v; })[0];
-    d.renCat=v; d.renCatVal=c0?c0.label:""; S.focus="renCatVal";
+    d.renCat=v; d.renCatVal=c0?tn(c0.label):""; S.focus="renCatVal";
     break;
   }
   case "renCatSave": {
     var nv=(d.renCatVal||"").trim();
-    if(nv) S.cats.forEach(function(c){ if(c.key===v) c.label=nv; });
+    S.cats.forEach(function(c){ if(c.key===v && nv && nv!==tn(c.label)) c.label=nv; });
     d.renCat=null; saveCats(); S.focus=null;
     break;
   }
@@ -940,10 +1125,10 @@ APP.addEventListener("click", function(e){
     });
     saveCats();
     break;
-  case "renItem": d.renItem=v+"::"+it; d.renItemVal=it; S.focus="renItemVal"; break;
+  case "renItem": d.renItem=v+"::"+it; d.renItemVal=tn(it); S.focus="renItemVal"; break;
   case "renItemSave": {
     var nv2=(d.renItemVal||"").trim();
-    if(nv2){
+    if(nv2 && nv2!==tn(it)){
       S.cats.forEach(function(c){
         if(c.key===v) c.items=c.items.map(function(x){ return x===it?nv2:x; });
       });
@@ -983,6 +1168,12 @@ APP.addEventListener("click", function(e){
   render();
 });
 
+function setLang(l){
+  LANG = l==="en"?"en":"el";
+  try{ localStorage.setItem("veh.lang", LANG); }catch(e){}
+  applyLang();
+}
+
 function closeModal(){ S.modal=null; S.draft={}; S.focus=null; render(); }
 
 /* ---------------- Browser back button ----------------
@@ -1014,6 +1205,7 @@ document.addEventListener("click", function(e){
   }
 });
 
+applyLang();
 render();
 </script>
 </body>
